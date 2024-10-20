@@ -1,3 +1,15 @@
 # CubeIDE ignores
 **/.metadata/**
 **/.settings/**
+
+# Temp local files
+temp.txt
+
+# Unit test frameworks
+tools/unity/*
+tools/fff/*
+
+# Build files
+**.obj
+**.o
+tests/build/**
