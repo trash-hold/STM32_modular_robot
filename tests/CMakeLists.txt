@@ -1,6 +1,7 @@
 # Fundamental settings
 cmake_minimum_required(VERSION 3.3)
 project(TEST_PLATFORM)
+enable_testing()
 
 #=================================
 #= Paths
@@ -20,16 +21,18 @@ set(FFF_PATH ${TOOLS_PATH}/fff)
 #=================================
 #= Libraries
 #==================================
-# Tools
+# Base unity
 add_library(unity STATIC ${UNITY_PATH}/unity.c)
 target_include_directories(unity PUBLIC ${UNITY_PATH})
 
+# Unity memory
 add_library(unity_memory STATIC ${UNITY_MEMORY_PATH}/unity_memory.c)
 target_include_directories(unity PUBLIC 
     ${UNITY_MEMORY_PATH}
 )
 target_link_libraries(unity_memory unity)
 
+# Unity fixture
 add_library(unity_fixture STATIC ${UNITY_FIXTURE_PATH}/unity_fixture.c)
 target_include_directories(unity_fixture PUBLIC 
     ${UNITY_FIXTURE_PATH}
@@ -39,12 +42,17 @@ target_link_libraries(unity_fixture unity_memory unity)
 #=================================
 #= Linking and building
 #==================================
-add_library(test SHARED
-    ${CURRENT_PATH}/test_module/test_module.c
-    ${CURRENT_PATH}/test_module/test_module_runner.c
-)
-target_link_libraries(test unity_fixture)
-target_include_directories(test PUBLIC ${FFF_PATH})
+# Searching for all tests folders
+file(GLOB test_list RELATIVE ${CURRENT_PATH} ${CURRENT_PATH}/test_*)
 
-add_executable(tests Alltests.c)
-target_link_libraries(tests test)
+message(STATUS "==================================")
+message(STATUS "List of all test modules:")
+foreach(test_dir ${test_list})
+    message(STATUS ${test_dir})
+    add_subdirectory(${test_dir})
+endforeach()
+message(STATUS "==================================")
+
+# Building all tests
+#add_executable(all_tests Alltests.c)
+#target_link_libraries(all_tests unity_fixture)
