@@ -2,8 +2,9 @@
 **/.metadata/**
 **/.settings/**
 
-# Temp local files
+# Local files
 temp.txt
+documentation/**
 
 # Unit test frameworks
 tools/unity/*
