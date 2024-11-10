@@ -37,6 +37,7 @@
 
 // COMMANDS
 #define WRITE_INST 0x03
+#define READ_INST 0x02
 
 /* USER CODE END PD */
 
@@ -51,13 +52,31 @@ UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+
+/* USER CODE END PV */
+
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_USART2_UART_Init(void);
+static void MX_UART4_Init(void);
+static void MX_UART5_Init(void);
+/* USER CODE BEGIN PFP */
+
+/* USER CODE END PFP */
+
+/* Private user code ---------------------------------------------------------*/
+/* USER CODE BEGIN 0 */
+uint8_t servo_tx_buff[13];
+uint8_t servo_rx_buff[4];
+
 void ServoSetPos(uint8_t id, uint16_t pos, uint8_t* buff)
 {
 	HAL_StatusTypeDef status;
 	// Declare operating speed
 	uint16_t speed = 3400;
 
-	// Fist sending to bytes of 0xFF
+	// Fist sending two bytes of 0xFF
 	*buff = 0xFF;
 	*(buff + 1) = 0xFF;
 
@@ -92,21 +111,37 @@ void ServoSetPos(uint8_t id, uint16_t pos, uint8_t* buff)
 	*(buff + 7) = ~checksum;
 	status = HAL_UART_Transmit(&huart4, buff, 8, HAL_MAX_DELAY);
 }
-/* USER CODE END PV */
 
-/* Private function prototypes -----------------------------------------------*/
-void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
-static void MX_UART4_Init(void);
-static void MX_UART5_Init(void);
-/* USER CODE BEGIN PFP */
+void ReadServoStatus(uint8_t id, uint8_t memory_register, uint8_t len)
+{
+	HAL_StatusTypeDef status;
+	uint8_t checksum = 0;
 
-/* USER CODE END PFP */
+	// Preparing receive request
+	// Fist sending two bytes of 0xFF
+	servo_tx_buff[0] = 0xFF;
+	servo_tx_buff[1] = 0xFF;
 
-/* Private user code ---------------------------------------------------------*/
-/* USER CODE BEGIN 0 */
+	// Sending transmission details
+	servo_tx_buff[2] = id;
+	servo_tx_buff[3] = len + 3; 		// number of messages
+	servo_tx_buff[4] = READ_INST;	// code of servo instruction
+	servo_tx_buff[5] = memory_register;		// servo memory address
+	status = HAL_UART_Transmit(&huart4, servo_tx_buff, 6, HAL_MAX_DELAY);
 
+	// Adding params to checksum
+	for(uint8_t i = 2; i<6; i++)
+		checksum += *(buff + i);
+
+	// Ending transmission with zeros
+	servo_tx_buff[0] = len;
+	servo_tx_buff[2] = ~checksum;
+	status = HAL_UART_Transmit(&huart4, servo_tx_buff, 2, HAL_MAX_DELAY);
+
+
+
+	// Waiting for data
+}
 /* USER CODE END 0 */
 
 /**
@@ -142,7 +177,7 @@ int main(void)
   MX_UART4_Init();
   MX_UART5_Init();
   /* USER CODE BEGIN 2 */
-  uint8_t servo_tx_buff[13];
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
