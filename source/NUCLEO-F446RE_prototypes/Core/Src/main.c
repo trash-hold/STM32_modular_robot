@@ -32,6 +32,12 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+// REGISTERS
+#define ACC_REG 41
+
+// COMMANDS
+#define WRITE_INST 0x03
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -40,16 +46,60 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef huart4;
+UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+void ServoSetPos(uint8_t id, uint16_t pos, uint8_t* buff)
+{
+	HAL_StatusTypeDef status;
+	// Declare operating speed
+	uint16_t speed = 3400;
 
+	// Fist sending to bytes of 0xFF
+	*buff = 0xFF;
+	*(buff + 1) = 0xFF;
+
+	// Sending transmission details
+	*(buff + 2) = id;
+	*(buff + 3) = 0x0A; 		// number of messages
+	*(buff + 4) = WRITE_INST;	// code of servo instruction
+	*(buff + 5) = ACC_REG;		// servo memory address
+	status = HAL_UART_Transmit(&huart4, buff, 6, HAL_MAX_DELAY);
+
+	uint8_t checksum = id + 0x0A + WRITE_INST + ACC_REG;
+
+	// Acceleration data
+	*(buff + 0) = (uint8_t) 50;
+	// Position data
+	*(buff + 1) = (uint8_t) (pos & 0x00FF);	// lower byte of position
+	*(buff + 2) = (uint8_t) ((pos & 0xFF00) >> 8);	// higher byte of position
+	// Time data
+	*(buff + 3) = 0x00;	// lower  byte of time
+	*(buff + 4) = 0x00;	// higher  byte of time
+	// Speed data
+	*(buff + 5) = (uint8_t) (speed & 0x00FF);	// lower byte of speed
+	*(buff + 6) = (uint8_t) ((speed & 0xFF00) >> 8);	// higher byte of speed
+
+	for(int i = 0; i < 7; i++)
+	{
+		uint8_t data = *(buff + i);
+		checksum += data;
+	}
+
+	// Sending checksum
+	*(buff + 7) = ~checksum;
+	status = HAL_UART_Transmit(&huart4, buff, 8, HAL_MAX_DELAY);
+}
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_UART4_Init(void);
+static void MX_UART5_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -89,14 +139,21 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_UART4_Init();
+  MX_UART5_Init();
   /* USER CODE BEGIN 2 */
-
+  uint8_t servo_tx_buff[13];
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	  ServoSetPos(0x01, 4095, servo_tx_buff);
+	  HAL_Delay(2000);
+	  ServoSetPos(0x01, 2000, servo_tx_buff);
+	  HAL_Delay(2000);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -149,6 +206,72 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief UART4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART4_Init(void)
+{
+
+  /* USER CODE BEGIN UART4_Init 0 */
+
+  /* USER CODE END UART4_Init 0 */
+
+  /* USER CODE BEGIN UART4_Init 1 */
+
+  /* USER CODE END UART4_Init 1 */
+  huart4.Instance = UART4;
+  huart4.Init.BaudRate = 1000000;
+  huart4.Init.WordLength = UART_WORDLENGTH_8B;
+  huart4.Init.StopBits = UART_STOPBITS_1;
+  huart4.Init.Parity = UART_PARITY_NONE;
+  huart4.Init.Mode = UART_MODE_TX_RX;
+  huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_HalfDuplex_Init(&huart4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART4_Init 2 */
+
+  /* USER CODE END UART4_Init 2 */
+
+}
+
+/**
+  * @brief UART5 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_UART5_Init(void)
+{
+
+  /* USER CODE BEGIN UART5_Init 0 */
+
+  /* USER CODE END UART5_Init 0 */
+
+  /* USER CODE BEGIN UART5_Init 1 */
+
+  /* USER CODE END UART5_Init 1 */
+  huart5.Instance = UART5;
+  huart5.Init.BaudRate = 1000000;
+  huart5.Init.WordLength = UART_WORDLENGTH_8B;
+  huart5.Init.StopBits = UART_STOPBITS_1;
+  huart5.Init.Parity = UART_PARITY_NONE;
+  huart5.Init.Mode = UART_MODE_TX_RX;
+  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_HalfDuplex_Init(&huart5) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN UART5_Init 2 */
+
+  /* USER CODE END UART5_Init 2 */
+
 }
 
 /**
