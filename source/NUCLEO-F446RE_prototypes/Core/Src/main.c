@@ -48,7 +48,6 @@
 
 /* Private variables ---------------------------------------------------------*/
 UART_HandleTypeDef huart4;
-UART_HandleTypeDef huart5;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -60,7 +59,6 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_UART4_Init(void);
-static void MX_UART5_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -68,7 +66,7 @@ static void MX_UART5_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t servo_tx_buff[13];
-uint8_t servo_rx_buff[4];
+uint8_t servo_rx_buff[10];
 
 void ServoSetPos(uint8_t id, uint16_t pos, uint8_t* buff)
 {
@@ -112,7 +110,7 @@ void ServoSetPos(uint8_t id, uint16_t pos, uint8_t* buff)
 	status = HAL_UART_Transmit(&huart4, buff, 8, HAL_MAX_DELAY);
 }
 
-void ReadServoStatus(uint8_t id, uint8_t memory_register, uint8_t len)
+void ServoRead(uint8_t id, uint8_t memory_register, uint8_t len)
 {
 	HAL_StatusTypeDef status;
 	uint8_t checksum = 0;
@@ -124,23 +122,25 @@ void ReadServoStatus(uint8_t id, uint8_t memory_register, uint8_t len)
 
 	// Sending transmission details
 	servo_tx_buff[2] = id;
-	servo_tx_buff[3] = len + 3; 		// number of messages
+	servo_tx_buff[3] = len + 2; 		// number of messages
 	servo_tx_buff[4] = READ_INST;	// code of servo instruction
 	servo_tx_buff[5] = memory_register;		// servo memory address
 	status = HAL_UART_Transmit(&huart4, servo_tx_buff, 6, HAL_MAX_DELAY);
 
 	// Adding params to checksum
 	for(uint8_t i = 2; i<6; i++)
-		checksum += *(buff + i);
+		checksum += servo_tx_buff[i];
 
 	// Ending transmission with zeros
 	servo_tx_buff[0] = len;
-	servo_tx_buff[2] = ~checksum;
+	checksum += len;
+	servo_tx_buff[1] = ~checksum;
 	status = HAL_UART_Transmit(&huart4, servo_tx_buff, 2, HAL_MAX_DELAY);
 
-
-
+	HAL_HalfDuplex_EnableReceiver(&huart4);
 	// Waiting for data
+	status = HAL_UART_Receive(&huart4, servo_rx_buff, 8, 500);
+
 }
 /* USER CODE END 0 */
 
@@ -175,7 +175,6 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_UART4_Init();
-  MX_UART5_Init();
   /* USER CODE BEGIN 2 */
 
   /* USER CODE END 2 */
@@ -185,10 +184,19 @@ int main(void)
   while (1)
   {
 
-	  ServoSetPos(0x01, 4095, servo_tx_buff);
+	  HAL_HalfDuplex_EnableTransmitter(&huart4);
+ 	  ServoSetPos(0x01, 0, servo_tx_buff);
 	  HAL_Delay(2000);
-	  ServoSetPos(0x01, 2000, servo_tx_buff);
+	  ServoSetPos(0x01, 0x3FF, servo_tx_buff);
 	  HAL_Delay(2000);
+	  ServoSetPos(0x01, 0x7FE, servo_tx_buff);
+	  HAL_Delay(2000);
+	  ServoSetPos(0x01, 0xBFD, servo_tx_buff);
+	  HAL_Delay(2000);
+
+	  ServoRead(0x01, 0x38, 2);
+	  HAL_Delay(2000);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -265,7 +273,7 @@ static void MX_UART4_Init(void)
   huart4.Init.Parity = UART_PARITY_NONE;
   huart4.Init.Mode = UART_MODE_TX_RX;
   huart4.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart4.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart4.Init.OverSampling = UART_OVERSAMPLING_8;
   if (HAL_HalfDuplex_Init(&huart4) != HAL_OK)
   {
     Error_Handler();
@@ -273,39 +281,6 @@ static void MX_UART4_Init(void)
   /* USER CODE BEGIN UART4_Init 2 */
 
   /* USER CODE END UART4_Init 2 */
-
-}
-
-/**
-  * @brief UART5 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_UART5_Init(void)
-{
-
-  /* USER CODE BEGIN UART5_Init 0 */
-
-  /* USER CODE END UART5_Init 0 */
-
-  /* USER CODE BEGIN UART5_Init 1 */
-
-  /* USER CODE END UART5_Init 1 */
-  huart5.Instance = UART5;
-  huart5.Init.BaudRate = 1000000;
-  huart5.Init.WordLength = UART_WORDLENGTH_8B;
-  huart5.Init.StopBits = UART_STOPBITS_1;
-  huart5.Init.Parity = UART_PARITY_NONE;
-  huart5.Init.Mode = UART_MODE_TX_RX;
-  huart5.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart5.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_HalfDuplex_Init(&huart5) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN UART5_Init 2 */
-
-  /* USER CODE END UART5_Init 2 */
 
 }
 
