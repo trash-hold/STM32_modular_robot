@@ -18,6 +18,10 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "can.h"
+#include "fatfs.h"
+#include "usart.h"
+#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -32,6 +36,13 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 
+// Defining function of modules
+#define MASTER_MODULE 0x01
+#define SLAVE_MODULE 0x00
+
+// CAN constants
+#define MASTER_ADR 0xAA
+#define SLAVE_ADR 0x55
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -40,7 +51,6 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 
@@ -48,14 +58,24 @@ UART_HandleTypeDef huart2;
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
-static void MX_GPIO_Init(void);
-static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+// Define role of the module
+uint8_t module_role = MASTER_MODULE;
+
+// Buffers for messages
+uint8_t can1_tx_buff[2];
+uint8_t can1_rx_buff[2];
+
+// CAN helper
+uint8_t transsmision_ended = 0x00;
+uint32_t successul_transsmisions = 0x00;
+uint32_t failed_transsmisions = 0x00;
 
 /* USER CODE END 0 */
 
@@ -89,14 +109,67 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_FATFS_Init();
+  MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
 
+  // Prepare frames
+  if (module_role == SLAVE_MODULE)
+  {
+	  tx1_header.StdId = MASTER_ADR;
+  }
+  else
+  {
+	  // Signalize that this is master module
+	  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_SET);
+
+	  tx1_header.StdId = SLAVE_ADR;
+
+	  can1_tx_buff[0] = 0x21;
+	  can1_tx_buff[1] = 0x37;
+
+	  transsmision_ended = 0x01;
+  }
+
+  tx1_header.DLC = 0x02;
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	if (transsmision_ended == 0x01)
+	{
+		if(module_role == MASTER_MODULE)
+		{
+			// Check if message was repeated correctly
+			if( (can1_rx_buff[0] == can1_tx_buff[1]) && (can1_rx_buff[1] == can1_tx_buff[0]) )
+			{
+				successul_transsmisions++;
+			}
+			else
+			{
+				failed_transsmisions++;
+			}
+
+			// Change TX buffer contents
+			can1_tx_buff[0] = ~can1_tx_buff[0];
+			can1_tx_buff[1] = ~can1_tx_buff[1];
+		}
+		else
+		{
+			// Repeat the message backwards
+			can1_tx_buff[0] = can1_rx_buff[1];
+			can1_tx_buff[1] = can1_rx_buff[0];
+		}
+
+		// Transmit
+		HAL_Delay(100);
+		HAL_StatusTypeDef status = HAL_CAN_AddTxMessage(&hcan1, &tx1_header, can1_tx_buff, &can1_tx_mail);
+		transsmision_ended = 0x00;
+		HAL_Delay(100);
+	}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -151,77 +224,23 @@ void SystemClock_Config(void)
   }
 }
 
-/**
-  * @brief USART2 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_USART2_UART_Init(void)
-{
-
-  /* USER CODE BEGIN USART2_Init 0 */
-
-  /* USER CODE END USART2_Init 0 */
-
-  /* USER CODE BEGIN USART2_Init 1 */
-
-  /* USER CODE END USART2_Init 1 */
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  if (HAL_UART_Init(&huart2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN USART2_Init 2 */
-
-  /* USER CODE END USART2_Init 2 */
-
-}
-
-/**
-  * @brief GPIO Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_GPIO_Init(void)
-{
-  GPIO_InitTypeDef GPIO_InitStruct = {0};
-/* USER CODE BEGIN MX_GPIO_Init_1 */
-/* USER CODE END MX_GPIO_Init_1 */
-
-  /* GPIO Ports Clock Enable */
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-
-  /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, GPIO_PIN_RESET);
-
-  /*Configure GPIO pin : B1_Pin */
-  GPIO_InitStruct.Pin = B1_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pin : LD2_Pin */
-  GPIO_InitStruct.Pin = LD2_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
-
-/* USER CODE BEGIN MX_GPIO_Init_2 */
-/* USER CODE END MX_GPIO_Init_2 */
-}
-
 /* USER CODE BEGIN 4 */
+// HAL_API / 102
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef * hcan)
+{
+	// Check which channel triggered the callback
+	if(hcan == &hcan1)
+	{
+		// Read the message
+		if (HAL_CAN_GetRxMessage(&hcan1, CAN_RX_FIFO0, &rx1_header, can1_rx_buff) != HAL_OK)
+		{
+			Error_Handler();
+		}
+
+		// Mark that transmission is finished
+		transsmision_ended = 0x01;
+	}
+}
 
 /* USER CODE END 4 */
 

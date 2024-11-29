@@ -5,6 +5,7 @@
 # Local files
 temp.txt
 documentation/**
+source/CAN_Networking/**
 
 # Unit test frameworks
 tools/unity/*
