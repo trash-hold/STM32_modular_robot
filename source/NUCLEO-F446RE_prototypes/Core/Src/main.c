@@ -19,7 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "fatfs.h"
-#include "spi.h"
+#include "sdio.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -48,7 +48,16 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint32_t counter;
+// FATFS variables
+FATFS fatfs;	// File system
+FIL file;		// File object
+char path[4];
 
+// Read write operations
+char file_name[] = "test.txt";
+char sent_bytes[4];
+uint32_t read_bytes, write_bytes;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,7 +68,6 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -93,68 +101,64 @@ int main(void)
   MX_GPIO_Init();
   MX_USART2_UART_Init();
   MX_FATFS_Init();
-  MX_SPI2_Init();
+  MX_SDIO_SD_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_Delay(2000); //a short delay is important to let the SD card settle
+  //HAL_Delay(2000); //a short delay is important to let the SD card settle
 
-  //some variables for FatFs
-  FATFS FatFs; 	//Fatfs handle
-  FIL fil; 		//File handle
-  FRESULT fres; //Result after operations
-
-  //Open the file system
-  fres = f_mount(&FatFs, "", 1); //1=mount now
-  if (fres != FR_OK)
+  // Mount SD
+  if( f_mount(&fatfs, path, 0) == FR_OK)
   {
-  	while(1);
+	  // Try to open the file
+	  FRESULT res = f_open(&file, file_name,  FA_OPEN_EXISTING | FA_READ);
+
+
+	  if (res == FR_OK)
+	  {
+		  // File exists
+		  if ( f_read(&file, &counter, sizeof(counter), (void*) &read_bytes) == FR_OK)
+		  {
+			  // Read was successful
+			  /*
+			  uint32_t temp;
+
+			  // Decode BCD ASCII
+			  temp += (counter & 0xFF) - 0x30;
+			  temp += (((counter & 0xFF00) >> 8) - 0x30)*10;
+			  temp += (((counter & 0xFF0000) >> 16) - 0x30)*100;
+			  temp += (((counter & 0xFF000000) >> 24) - 0x30)*1000;
+
+			  counter = temp;
+			  */
+		  }
+
+		  f_close(&file);
+	  }
+	  else
+	  {
+		  // File doesnt exist - create
+		  if( f_open(&file, file_name, FA_CREATE_NEW | FA_WRITE) == FR_OK)
+		  {
+			  // File sucessfully created
+			  if (f_write(&file, &counter, sizeof(counter), (void*) &write_bytes) == FR_OK)
+			  {
+				  // Write data into file
+			  }
+
+			  f_close(&file);
+		  }
+		  else
+		  {
+			  // Couldnt create file
+			  Error_Handler();
+		  }
+	  }
   }
-
-  //Let's get some statistics from the SD card
-  DWORD free_clusters, free_sectors, total_sectors;
-
-  FATFS* getFreeFs;
-
-  fres = f_getfree("", &free_clusters, &getFreeFs);
-  if (fres != FR_OK)
+  else
   {
-  	while(1);
+	  // Mount unsuccessful
+	  Error_Handler();
   }
-
-  //Formula comes from ChaN's documentation
-  total_sectors = (getFreeFs->n_fatent - 2) * getFreeFs->csize;
-  free_sectors = free_clusters * getFreeFs->csize;
-
-  //Now let's try to open file "test.txt"
-  fres = f_open(&fil, "test.txt", FA_READ);
-  if (fres != FR_OK)
-  {
-  	while(1);
-  }
-
-  //Read 30 bytes from "test.txt" on the SD card
-  BYTE readBuf[30];
-
-  //We can either use f_read OR f_gets to get data out of files
-  //f_gets is a wrapper on f_read that does some string formatting for us
-  TCHAR* rres = f_gets((TCHAR*)readBuf, 30, &fil);
-
-  //Be a tidy kiwi - don't forget to close your file!
-  f_close(&fil);
-
-  //Now let's try and write a file "write.txt"
-  fres = f_open(&fil, "write.txt", FA_WRITE | FA_OPEN_ALWAYS | FA_CREATE_ALWAYS);
-
-  //Copy in a string
-  strncpy((char*)readBuf, "a new file is made!", 19);
-  UINT bytesWrote;
-  fres = f_write(&fil, readBuf, 19, &bytesWrote);
-
-  //Be a tidy kiwi - don't forget to close your file!
-  f_close(&fil);
-
-  //We're done, so de-mount the drive
-  f_mount(NULL, "", 0);
 
   /* USER CODE END 2 */
 
@@ -163,7 +167,39 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	HAL_Delay(500);
+	// Increment counter
+	HAL_Delay(1000);
+	counter++;
+
+	if (counter > 9999)
+		counter = 0;
+	// Write to file	if( f_open(&file, file_name, FA_WRITE) == FR_OK)
+
+	/*
+	uint32_t rest = counter;
+	uint32_t temp = counter;
+
+	temp = rest / 1000;
+	rest -= temp*1000;
+	sent_bytes[3] = temp + 0x30;
+
+	temp = rest / 100;
+	rest -= temp*100;
+	sent_bytes[2] = temp + 0x30;
+
+	temp = rest / 10;
+	rest -= temp*10;
+	sent_bytes[1] = temp + 0x30;
+
+	sent_bytes[0] = rest +  0x30;
+	*/
+	if( f_open(&file, file_name, FA_OPEN_EXISTING | FA_WRITE) == FR_OK)
+	{
+		//FRESULT res = f_write(&file, sent_bytes, sizeof(sent_bytes), (void *)&write_bytes);
+		FRESULT res = f_write(&file, &counter, sizeof(counter), (void *)&write_bytes);
+		f_close(&file);
+	}
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -191,10 +227,10 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 336;
-  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
-  RCC_OscInitStruct.PLL.PLLQ = 2;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 50;
+  RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV2;
+  RCC_OscInitStruct.PLL.PLLQ = 3;
   RCC_OscInitStruct.PLL.PLLR = 2;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
   {
@@ -210,7 +246,7 @@ void SystemClock_Config(void)
   RCC_ClkInitStruct.APB1CLKDivider = RCC_HCLK_DIV2;
   RCC_ClkInitStruct.APB2CLKDivider = RCC_HCLK_DIV1;
 
-  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_2) != HAL_OK)
+  if (HAL_RCC_ClockConfig(&RCC_ClkInitStruct, FLASH_LATENCY_1) != HAL_OK)
   {
     Error_Handler();
   }
