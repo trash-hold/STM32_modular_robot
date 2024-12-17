@@ -24,7 +24,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "ADXL345.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -35,11 +35,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define ADXL345_ALT_ADR 0xA6 // val shifted left
-#define READ_FRAME 0xA7
-#define WRITE_FRAME 0xA6
-
 #define PWR_CTR_REG 0x2D
-#define DATAX0_REG 0x32
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -57,13 +53,14 @@
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
-void acc_measure();
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t i2c_tx_buff[2];
-uint8_t i2c_rx_buff[6];
+uint8_t rx_buff[6];
+uint16_t i2c_rx_buff[3];
 int16_t x, y, z;
 /* USER CODE END 0 */
 
@@ -101,6 +98,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // Change ADXL345 operation mode into measurement
+  AccAdd_I2CHandler(&hi2c1);
   i2c_tx_buff[0] = PWR_CTR_REG;
   i2c_tx_buff[1] = 0x08;
 
@@ -112,7 +110,8 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	acc_measure();
+	HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x32, 1, rx_buff, 6, 500);
+	AccRawMeasurment(&i2c_rx_buff);
 	HAL_Delay(1000);
     /* USER CODE BEGIN 3 */
   }
@@ -167,17 +166,7 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void acc_measure()
-{
-	HAL_StatusTypeDef status = HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, DATAX0_REG, 1, i2c_rx_buff, 6, 500);
 
-	if(status == HAL_OK)
-	{
-		x = (i2c_rx_buff[1] << 8) | i2c_rx_buff[0];
-		y = (i2c_rx_buff[3] << 8) | i2c_rx_buff[2];
-		z = (i2c_rx_buff[5] << 8) | i2c_rx_buff[4];
-	}
-}
 /* USER CODE END 4 */
 
 /**
