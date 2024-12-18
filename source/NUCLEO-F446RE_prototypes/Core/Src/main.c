@@ -25,6 +25,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "ADXL345.h"
+#include "error_codes.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -60,7 +61,7 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 uint8_t i2c_tx_buff[2];
 uint8_t rx_buff[6];
-uint16_t i2c_rx_buff[3];
+int16_t i2c_rx_buff[3];
 int16_t x, y, z;
 /* USER CODE END 0 */
 
@@ -100,19 +101,36 @@ int main(void)
   // Change ADXL345 operation mode into measurement
   AccAdd_I2CHandler(&hi2c1);
   i2c_tx_buff[0] = PWR_CTR_REG;
-  i2c_tx_buff[1] = 0x08;
+  i2c_tx_buff[1] = 0x00;
 
   HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
+  i2c_tx_buff[0] = PWR_CTR_REG;
+  i2c_tx_buff[1] = 0x08;
+
+  status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
+
+  i2c_tx_buff[0] = 0x31;
+  i2c_tx_buff[1] = 0x01;
+
+  status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  // Manual measurement
+	  HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x32, 1, rx_buff, 6, 200);
+
+	  // Avg measurment
+	  //AccAvgMeasurment(i2c_rx_buff, 32);
+	  ReturnCode ret = AccSelfTest(i2c_rx_buff);
+
+	  HAL_Delay(1000);
+
     /* USER CODE END WHILE */
-	HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x32, 1, rx_buff, 6, 500);
-	AccRawMeasurment(&i2c_rx_buff);
-	HAL_Delay(1000);
+
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
