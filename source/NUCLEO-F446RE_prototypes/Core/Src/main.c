@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "ADXL345.h"
 #include "error_codes.h"
+#include "trig.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -125,7 +126,10 @@ int main(void)
 
 	  // Avg measurment
 	  //AccAvgMeasurment(i2c_rx_buff, 32);
-	  ReturnCode ret = AccSelfTest(i2c_rx_buff);
+	  //ReturnCode ret = AccSelfTest(i2c_rx_buff);
+
+	  float angle = LUT_ASine(0.3827);
+	  float val = LUT_Sine(22.500);
 
 	  HAL_Delay(1000);
 

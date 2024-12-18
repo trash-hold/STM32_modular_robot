@@ -1,11 +1,3 @@
-/*
- * ADXL345.c
- *
- *  Created on: Dec 17, 2024
- *      Author: Barabash
- */
-
-
 #include "ADXL345.h"
 
 I2C_HandleTypeDef *acc_i2c;

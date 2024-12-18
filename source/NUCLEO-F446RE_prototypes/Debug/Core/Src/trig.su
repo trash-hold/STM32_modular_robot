@@ -1,0 +1,4 @@
+../Core/Src/trig.c:12:14:interpolate_x	32	static
+../Core/Src/trig.c:24:14:interpolate_y	32	static
+../Core/Src/trig.c:35:7:LUT_ASine	32	static
+../Core/Src/trig.c:60:7:LUT_Sine	32	static
