@@ -63,6 +63,7 @@ void SystemClock_Config(void);
 uint8_t i2c_tx_buff[2];
 uint8_t rx_buff[6];
 int16_t i2c_rx_buff[3];
+float angles[3];
 int16_t x, y, z;
 /* USER CODE END 0 */
 
@@ -125,11 +126,10 @@ int main(void)
 	  HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x32, 1, rx_buff, 6, 200);
 
 	  // Avg measurment
-	  //AccAvgMeasurment(i2c_rx_buff, 32);
+	  AccAvgMeasurment(i2c_rx_buff, 32);
 	  //ReturnCode ret = AccSelfTest(i2c_rx_buff);
+	  GetTiltAngles(angles, i2c_rx_buff);
 
-	  float angle = LUT_ASine(0.3827);
-	  float val = LUT_Sine(22.500);
 
 	  HAL_Delay(1000);
 

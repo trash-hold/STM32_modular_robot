@@ -54,7 +54,7 @@ ReturnCode AccAvgMeasurment(int16_t *xyz_buffer, uint32_t samples)
 	int32_t avg_y = 0;
 	int32_t avg_z = 0;
 
-	// Get sum of
+	// Get sum
 	for(uint16_t i = 1; i <= samples; i++)
 	{
 		ReturnCode status = AccRawMeasurment(read_buff);

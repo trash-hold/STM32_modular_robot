@@ -1,4 +1,9 @@
-../Core/Src/trig.c:12:14:interpolate_x	32	static
-../Core/Src/trig.c:24:14:interpolate_y	32	static
-../Core/Src/trig.c:35:7:LUT_ASine	32	static
-../Core/Src/trig.c:60:7:LUT_Sine	32	static
+../Core/Src/trig.c:13:14:interpolate_x	32	static
+../Core/Src/trig.c:25:14:interpolate_y	32	static
+../Core/Src/trig.c:34:14:LUT_Interpolate_X	32	static
+../Core/Src/trig.c:53:14:LUT_Interpolate_Y	24	static
+../Core/Src/trig.c:67:7:LUT_ASine	40	static
+../Core/Src/trig.c:99:7:LUT_Sine	32	static
+../Core/Src/trig.c:122:7:LUT_Tan	32	static
+../Core/Src/trig.c:146:7:LUT_ATan	40	static
+../Core/Src/trig.c:180:6:GetTiltAngles	48	static

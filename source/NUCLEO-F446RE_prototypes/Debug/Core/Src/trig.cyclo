@@ -1,4 +1,9 @@
-../Core/Src/trig.c:12:14:interpolate_x	2
-../Core/Src/trig.c:24:14:interpolate_y	1
-../Core/Src/trig.c:35:7:LUT_ASine	6
-../Core/Src/trig.c:60:7:LUT_Sine	3
+../Core/Src/trig.c:13:14:interpolate_x	2
+../Core/Src/trig.c:25:14:interpolate_y	1
+../Core/Src/trig.c:34:14:LUT_Interpolate_X	4
+../Core/Src/trig.c:53:14:LUT_Interpolate_Y	2
+../Core/Src/trig.c:67:7:LUT_ASine	6
+../Core/Src/trig.c:99:7:LUT_Sine	3
+../Core/Src/trig.c:122:7:LUT_Tan	3
+../Core/Src/trig.c:146:7:LUT_ATan	6
+../Core/Src/trig.c:180:6:GetTiltAngles	1
