@@ -18,10 +18,15 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "i2c.h"
+#include "usart.h"
+#include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "ADXL345.h"
+#include "error_codes.h"
+#include "trig.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,6 +36,8 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define ADXL345_ALT_ADR 0xA6 // val shifted left
+#define PWR_CTR_REG 0x2D
 
 // REGISTERS
 #define ACC_REG 41
@@ -61,10 +68,16 @@ static void MX_USART2_UART_Init(void);
 static void MX_UART4_Init(void);
 /* USER CODE BEGIN PFP */
 
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+uint8_t i2c_tx_buff[2];
+uint8_t rx_buff[6];
+int16_t i2c_rx_buff[3];
+float angles[3];
+int16_t x, y, z;
 uint8_t servo_tx_buff[13];
 uint8_t servo_rx_buff[10];
 
@@ -174,8 +187,25 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_I2C1_Init();
   MX_UART4_Init();
   /* USER CODE BEGIN 2 */
+
+  // Change ADXL345 operation mode into measurement
+  AccAdd_I2CHandler(&hi2c1);
+  i2c_tx_buff[0] = PWR_CTR_REG;
+  i2c_tx_buff[1] = 0x00;
+
+  HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
+  i2c_tx_buff[0] = PWR_CTR_REG;
+  i2c_tx_buff[1] = 0x08;
+
+  status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
+
+  i2c_tx_buff[0] = 0x31;
+  i2c_tx_buff[1] = 0x01;
+
+  status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
 
   /* USER CODE END 2 */
 
@@ -183,6 +213,17 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  // Manual measurement
+	  HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x32, 1, rx_buff, 6, 200);
+
+	  // Avg measurment
+	  AccAvgMeasurment(i2c_rx_buff, 32);
+	  //ReturnCode ret = AccSelfTest(i2c_rx_buff);
+	  GetTiltAngles(angles, i2c_rx_buff);
+
+
+	  HAL_Delay(1000);
+
 
 	  HAL_HalfDuplex_EnableTransmitter(&huart4);
  	  ServoSetPos(0x01, 0, servo_tx_buff);
