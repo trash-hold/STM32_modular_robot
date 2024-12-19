@@ -1,8 +1,0 @@
-../Core/Src/main.c:71:6:ServoSetPos	2
-../Core/Src/main.c:113:6:ServoRead	2
-../Core/Src/main.c:151:5:main	1
-../Core/Src/main.c:211:6:SystemClock_Config	3
-../Core/Src/main.c:259:13:MX_UART4_Init	2
-../Core/Src/main.c:292:13:MX_USART2_UART_Init	2
-../Core/Src/main.c:325:13:MX_GPIO_Init	1
-../Core/Src/main.c:365:6:Error_Handler	1
