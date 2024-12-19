@@ -1,0 +1,6 @@
+../Core/Src/ADXL345.c:7:6:AccAdd_I2CHandler	1
+../Core/Src/ADXL345.c:12:12:AccCmd	2
+../Core/Src/ADXL345.c:24:12:AccRead	2
+../Core/Src/ADXL345.c:36:12:AccRawMeasurment	2
+../Core/Src/ADXL345.c:51:12:AccAvgMeasurment	3
+../Core/Src/ADXL345.c:82:12:AccSelfTest	17
