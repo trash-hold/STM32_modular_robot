@@ -183,14 +183,15 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   Servo_AddControler(0x00, &huart4);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
-	  ReturnCode status = ServoSetPos(0x00, 0x00, 3400, 50);
+	  ReturnCode status = ServoPing(0x00, 0x01);
+	  status = ServoSetPos(0x00, 0x00, 3400, 50);
 	  HAL_Delay(1000);
 	  status = ServoSetPos(0x00, 0x7FF, 3400, 10);
 	  HAL_Delay(1000);

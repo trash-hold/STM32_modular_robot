@@ -29,7 +29,11 @@ ReturnCode Servo_AddControler(uint8_t servo_line, UART_HandleTypeDef* handler)
 ReturnCode ServoWrite(UART_HandleTypeDef* uart, uint8_t reg, uint8_t *data_buffer, uint8_t len)
 {
 	// Enable transmission mode
-	HAL_HalfDuplex_EnableTransmitter(uart);
+	HAL_StatusTypeDef status = HAL_HalfDuplex_EnableTransmitter(uart);
+	if (status != HAL_OK)
+	{
+		return G_ERROR;
+	}
 
 	// Create helper buffer
 	const uint8_t buffer_size = (len > 5) ? len + 1 : 6;
@@ -61,7 +65,7 @@ ReturnCode ServoWrite(UART_HandleTypeDef* uart, uint8_t reg, uint8_t *data_buffe
 		checksum += tx_buffer[i];
 	}
 
-	HAL_StatusTypeDef status = HAL_UART_Transmit(uart, tx_buffer, 6, SERVO_TIMEOUT);
+	status = HAL_UART_Transmit(uart, tx_buffer, 6, SERVO_TIMEOUT);
 	if (status != HAL_OK)
 		return G_ERROR;
 
@@ -110,3 +114,102 @@ ReturnCode ServoSetPos(uint8_t servo_line, uint16_t pos, uint16_t speed, uint8_t
 
 	return ServoWrite(uart, SERVO_ACC_REG, buff, 7);
 }
+
+ReturnCode ServoRead(uint8_t servo_line, uint8_t reg, uint8_t* data_buffer, uint8_t bytes)
+{
+	UART_HandleTypeDef* uart;
+	switch(servo_line)
+	{
+		case 0x00:
+			uart = uart_s1;
+			break;
+		case 0x01:
+			uart = uart_s2;
+			break;
+		default:
+			return G_ERROR;
+	}
+
+	// Send data receive request
+	if (ServoWrite(uart, reg, &bytes, 1) != G_SUCCESS)
+		return G_ERROR;
+
+	// Change mode into Receiver
+	HAL_StatusTypeDef status = HAL_HalfDuplex_EnableReceiver(uart);
+	if (status != HAL_OK)
+		return G_ERROR;
+
+	status = HAL_UART_Receive(uart, data_buffer, bytes, SERVO_TIMEOUT);
+	if (status != HAL_OK)
+		return G_ERROR;
+
+	return G_SUCCESS;
+}
+
+ReturnCode ServoPing(uint8_t servo_line, uint8_t id)
+{
+	UART_HandleTypeDef* uart;
+	switch(servo_line)
+	{
+		case 0x00:
+			uart = uart_s1;
+			break;
+		case 0x01:
+			uart = uart_s2;
+			break;
+		default:
+			return G_ERROR;
+	}
+
+	HAL_StatusTypeDef status = HAL_HalfDuplex_EnableTransmitter(uart);
+	if (status != HAL_OK)
+	{
+		return G_ERROR;
+	}
+
+	// Ping buffer
+	uint8_t buffer[6];
+	uint8_t checksum = ~(id + 0x02 + 0x01);
+
+	// Buffering
+	buffer[0] = 0xFF;
+	buffer[1] = 0xFF;
+	// Sending transmission details
+	buffer[2] = id;		// ID
+	buffer[3] = 0x02;	// Transmission length
+	buffer[4] = 0x01;	// Instruction code - ping = 0x01
+
+	// Send details
+	status = HAL_UART_Transmit(uart, buffer, 5, SERVO_TIMEOUT);
+	if (status != HAL_OK)
+		return G_ERROR;
+
+	// Send checksum
+	status = HAL_UART_Transmit(uart, &checksum, 1, SERVO_TIMEOUT);
+		if (status != HAL_OK)
+			return G_ERROR;
+
+	// Change mode into receiver and get ping response
+	status = HAL_HalfDuplex_EnableReceiver(uart);
+	if (status != HAL_OK)
+		return G_ERROR;
+
+	status = HAL_UART_Receive(uart, buffer, 6, SERVO_TIMEOUT);
+	if (status != HAL_OK)
+		return G_ERROR;
+	// First two bytes are buffer so they are skipped
+
+	if ( buffer[2] != id )
+		return G_ERROR;
+
+	if ( buffer[3] != 0x02)
+		return G_ERROR;
+
+	checksum = buffer[2] + buffer[3] + buffer[4];
+	checksum = ~checksum;
+	if ( checksum != buffer[5] )
+		return G_ERROR;
+
+	return G_SUCCESS;
+}
+
