@@ -75,6 +75,7 @@ uint8_t servo_rx_buff[10];
 void TempServoSetPos(uint8_t id, uint16_t pos, uint8_t* buff)
 {
 	HAL_StatusTypeDef status;
+	HAL_HalfDuplex_EnableTransmitter(&huart4);
 	// Declare operating speed
 	uint16_t speed = 3400;
 
@@ -119,6 +120,7 @@ void TempServoRead(uint8_t id, uint8_t memory_register, uint8_t len)
 	HAL_StatusTypeDef status;
 	uint8_t checksum = 0;
 
+	HAL_HalfDuplex_EnableTransmitter(&huart4);
 	// Preparing receive request
 	// Fist sending two bytes of 0xFF
 	servo_tx_buff[0] = 0xFF;
@@ -190,25 +192,30 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  ReturnCode status = ServoPing(0x00, 0x01);
-	  status = ServoSetPos(0x00, 0x00, 3400, 50);
+	  //ReturnCode status = ServoPing(0x00, 0x01);
+	  ReturnCode status = ServoSetPos(0x00, 0x00, 3400, 50);
 	  HAL_Delay(1000);
+	  status = ServoRead(0x00, 0x38, servo_rx_buff, 4);
+	  status = ServoSetPos(0x00, 0x3FF, 3400, 10);
+	  status = ServoRead(0x00, 0x38, servo_rx_buff, 4);
+
+	  HAL_Delay(1000);
+	  TempServoSetPos(0x01, 0x00, servo_tx_buff);
+	  HAL_Delay(1000);
+	  TempServoRead(0x01, 0x38, 4);
+	  HAL_Delay(1000);
+
+	  uint16_t status_msg = ServoTemp(0x00);
+	  uint8_t temp = status_msg & 0xFF;
+	  ReturnCode msg = (ReturnCode) ((status_msg & 0xFF00) >> 8);
+
+	  /*
 	  status = ServoSetPos(0x00, 0x7FF, 3400, 10);
 	  HAL_Delay(1000);
 	  status = ServoSetPos(0x00, 0x3FF, 3400, 10);
 	  HAL_Delay(1000);
 	  status = ServoSetPos(0x00, 0x7FF, 3400, 10);
 	  HAL_Delay(1000);
-	  /*
-	  HAL_HalfDuplex_EnableTransmitter(&huart4);
- 	  ServoSetPos(0x01, 0, servo_tx_buff);
-	  HAL_Delay(2000);
-	  ServoSetPos(0x01, 0x3FF, servo_tx_buff);
-	  HAL_Delay(2000);
-	  ServoSetPos(0x01, 0x7FE, servo_tx_buff);
-	  HAL_Delay(2000);
-	  ServoSetPos(0x01, 0x3FF, servo_tx_buff);
-	  HAL_Delay(2000);
 	  */
 
 

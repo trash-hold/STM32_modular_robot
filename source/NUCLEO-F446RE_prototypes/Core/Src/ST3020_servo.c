@@ -2,7 +2,12 @@
 
 #define SERVO_TIMEOUT 200
 
+#define SERVO_WRITE_INS 0x03
+#define SERVO_READ_INS 0x02
+#define SERVO_PING_INS 0x01
+
 #define SERVO_ACC_REG 0x29
+#define SERVO_TEMP_REG 0x3F
 
 UART_HandleTypeDef* uart_s1;
 UART_HandleTypeDef* uart_s2;
@@ -26,7 +31,7 @@ ReturnCode Servo_AddControler(uint8_t servo_line, UART_HandleTypeDef* handler)
 	return G_SUCCESS;
 }
 
-ReturnCode ServoWrite(UART_HandleTypeDef* uart, uint8_t reg, uint8_t *data_buffer, uint8_t len)
+static ReturnCode ServoWrite(UART_HandleTypeDef* uart, uint8_t cmd, uint8_t reg, uint8_t *data_buffer, uint8_t len)
 {
 	// Enable transmission mode
 	HAL_StatusTypeDef status = HAL_HalfDuplex_EnableTransmitter(uart);
@@ -49,7 +54,7 @@ ReturnCode ServoWrite(UART_HandleTypeDef* uart, uint8_t reg, uint8_t *data_buffe
 	//!!!!!!!!!!!!!!!!!!!!!!!!!
 	tx_buffer[2] = 0x01;		// ID
 	tx_buffer[3] = len + 0x03;	// Transmission length
-	tx_buffer[4] = 0x03;		// Instruction code - write = 0x03
+	tx_buffer[4] = cmd;		// Instruction code - write = 0x03
 	tx_buffer[5] = reg;			// Servo memory address
 
 	uint8_t checksum = 0;
@@ -112,7 +117,7 @@ ReturnCode ServoSetPos(uint8_t servo_line, uint16_t pos, uint16_t speed, uint8_t
 	buff[5] = (uint8_t) (speed & 0x00FF);			// Lower byte
 	buff[6] = (uint8_t) ((speed & 0xFF00) >> 8);	// Higher byte
 
-	return ServoWrite(uart, SERVO_ACC_REG, buff, 7);
+	return ServoWrite(uart, SERVO_WRITE_INS, SERVO_ACC_REG, buff, 7);
 }
 
 ReturnCode ServoRead(uint8_t servo_line, uint8_t reg, uint8_t* data_buffer, uint8_t bytes)
@@ -131,7 +136,7 @@ ReturnCode ServoRead(uint8_t servo_line, uint8_t reg, uint8_t* data_buffer, uint
 	}
 
 	// Send data receive request
-	if (ServoWrite(uart, reg, &bytes, 1) != G_SUCCESS)
+	if (ServoWrite(uart, SERVO_READ_INS, reg, &bytes, 1) != G_SUCCESS)
 		return G_ERROR;
 
 	// Change mode into Receiver
@@ -139,8 +144,21 @@ ReturnCode ServoRead(uint8_t servo_line, uint8_t reg, uint8_t* data_buffer, uint
 	if (status != HAL_OK)
 		return G_ERROR;
 
+	// Servo sends additional header message
+	uint8_t header_buffer[5];
+	// All transmissions start with 0xFF if read byte is different discard it
+	HAL_UART_Receive(uart, header_buffer, 1, SERVO_TIMEOUT);
+	if( header_buffer[0] != 0xFF)
+		HAL_UART_Receive(uart, header_buffer, 5, SERVO_TIMEOUT);
+	else
+		HAL_UART_Receive(uart, header_buffer + 1, 4, SERVO_TIMEOUT);
+
 	status = HAL_UART_Receive(uart, data_buffer, bytes, SERVO_TIMEOUT);
 	if (status != HAL_OK)
+		return G_ERROR;
+
+	// Verify ID and transmission length
+	if ( (header_buffer[2] != 0x01) || (header_buffer[3] != bytes + 0x02) )
 		return G_ERROR;
 
 	return G_SUCCESS;
@@ -213,3 +231,12 @@ ReturnCode ServoPing(uint8_t servo_line, uint8_t id)
 	return G_SUCCESS;
 }
 
+
+uint16_t ServoTemp(uint8_t servo_line)
+{
+	uint8_t temp = 0;
+
+	ReturnCode status = ServoRead(servo_line, SERVO_TEMP_REG, &temp, 1);
+
+	return (((uint16_t) status  << 8) | temp);
+}
