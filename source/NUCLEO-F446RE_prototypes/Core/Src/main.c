@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "fatfs.h"
+#include "rtc.h"
 #include "sdio.h"
 #include "usart.h"
 #include "gpio.h"
@@ -55,9 +56,10 @@ FIL file;		// File object
 char path[4];
 
 // Read write operations
-char file_name[] = "test.txt";
+char file_name[] = "log_01.01.01.txt";
 char sent_bytes[4];
 uint32_t read_bytes, write_bytes;
+uint8_t change_file = 0x00;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -102,7 +104,17 @@ int main(void)
   MX_USART2_UART_Init();
   MX_FATFS_Init();
   MX_SDIO_SD_Init();
+  MX_RTC_Init();
   /* USER CODE BEGIN 2 */
+
+  RTC_TimeTypeDef time;
+  RTC_DateTypeDef date;
+
+  // Get current date to open/create correct text file
+  HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BCD);
+  HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BCD);
+
+  snprintf(file_name, sizeof(file_name), "log_%d%d_%d%d_%d%d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
 
   //HAL_Delay(2000); //a short delay is important to let the SD card settle
 
@@ -160,45 +172,51 @@ int main(void)
 	  Error_Handler();
   }
 
+  char buffer[18];
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	  HAL_Delay(1000);
+	  // Read date and time
+	  HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BCD);
+	  HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BCD);
+
+	  if (change_file == 0x01)
+	  {
+		  f_close(&file);
+
+		  // Change file name
+		  snprintf(file_name, sizeof(file_name), "log_%d%d_%d%d_%d%d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
+
+		  if( f_open(&file, file_name, FA_CREATE_NEW | FA_OPEN_EXISTING | FA_WRITE) != FR_OK)
+		  {
+			  // Error function
+		  }
+
+		  f_close(&file);
+		  change_file = 0x00;
+	  }
+
+	  // Format buffer
+	  snprintf(buffer, 9, "%d%d.%d%d.%d%d", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
+	  snprintf(buffer + 8, 11, " %d%d:%d%d:%d%d\n", ((time.Hours & 0xF0) >> 4), (time.Hours & 0x0F), ((time.Minutes & 0xF0) >> 4), (time.Minutes & 0x0F), ((time.Seconds & 0xF0) >> 4), (time.Seconds & 0x0F));
+
+	  if( f_open(&file, file_name, FA_OPEN_APPEND | FA_WRITE) == FR_OK)
+	  {
+		  // File sucessfully created
+		  if (f_write(&file, &buffer, sizeof(buffer), (void*) &write_bytes) == FR_OK)
+		  {
+			  // Write data into file
+		  }
+
+		  f_close(&file);
+	  }
+
     /* USER CODE END WHILE */
-	// Increment counter
-	HAL_Delay(1000);
-	counter++;
-
-	if (counter > 9999)
-		counter = 0;
-	// Write to file	if( f_open(&file, file_name, FA_WRITE) == FR_OK)
-
-	/*
-	uint32_t rest = counter;
-	uint32_t temp = counter;
-
-	temp = rest / 1000;
-	rest -= temp*1000;
-	sent_bytes[3] = temp + 0x30;
-
-	temp = rest / 100;
-	rest -= temp*100;
-	sent_bytes[2] = temp + 0x30;
-
-	temp = rest / 10;
-	rest -= temp*10;
-	sent_bytes[1] = temp + 0x30;
-
-	sent_bytes[0] = rest +  0x30;
-	*/
-	if( f_open(&file, file_name, FA_OPEN_EXISTING | FA_WRITE) == FR_OK)
-	{
-		//FRESULT res = f_write(&file, sent_bytes, sizeof(sent_bytes), (void *)&write_bytes);
-		FRESULT res = f_write(&file, &counter, sizeof(counter), (void *)&write_bytes);
-		f_close(&file);
-	}
 
     /* USER CODE BEGIN 3 */
   }
@@ -222,9 +240,11 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI|RCC_OSCILLATORTYPE_LSI;
+  RCC_OscInitStruct.LSEState = RCC_LSE_ON;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   RCC_OscInitStruct.PLL.PLLM = 8;
@@ -253,7 +273,10 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *handle)
+{
+	change_file = 0x01;
+}
 /* USER CODE END 4 */
 
 /**
