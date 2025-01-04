@@ -108,9 +108,9 @@ typedef enum{
 function:	
 			Defines commonly used colors for the display
 ********************************************************************************/
-#define LCD_BACKGROUND		WHITE   //Default background color
-#define FONT_BACKGROUND		WHITE   //Default font background color
-#define FONT_FOREGROUND	  GRED    //Default font foreground color
+#define LCD_BACKGROUND		BLACK   //Default background color
+#define FONT_BACKGROUND		BLACK   //Default font background color
+#define FONT_FOREGROUND	  WHITE    //Default font foreground color
 
 #define WHITE          0xFFFF
 #define BLACK          0x0000	  
