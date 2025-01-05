@@ -18,15 +18,25 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+<<<<<<< HEAD
 #include "i2c.h"
+=======
+#include "spi.h"
+>>>>>>> feature-lcd
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+<<<<<<< HEAD
 #include "ADXL345.h"
 #include "error_codes.h"
 #include "trig.h"
+=======
+//#include "DEV_config.h"
+//#include "LCD.h"
+#include "LCD_driver.h"
+>>>>>>> feature-lcd
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -97,6 +107,7 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+<<<<<<< HEAD
   MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 
@@ -116,6 +127,19 @@ int main(void)
 
   status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
 
+=======
+  MX_SPI3_Init();
+  /* USER CODE BEGIN 2 */
+
+  Screen_Init();
+  Screen_DrawInitScreen();
+
+  for (uint8_t i = 0; i <= 0x06; i++)
+  {
+	  Screen_DrawNextInit(i, 0x00);
+	  HAL_Delay(1000);
+  }
+>>>>>>> feature-lcd
   /* USER CODE END 2 */
 
   /* Infinite loop */
