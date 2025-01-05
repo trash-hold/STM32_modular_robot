@@ -31,7 +31,7 @@ static void Screen_Draw_HeaderJustified(uint16_t y, const char* string, uint16_t
 	LCD_DisplayString(x_offset, y, string, Font, LCD_BACKGROUND, color);
 }
 
-void Sreen_DrawInitScreen()
+void Screen_DrawInitScreen()
 {
 	// Clear screen
 	LCD_Clear(BLACK);
@@ -69,6 +69,121 @@ void Sreen_DrawInitScreen()
 	Screen_Draw_HeaderJustified(150, "Please wait", 11, &Font8, GRAY);
 
 	current_screen = INIT_SCREEN;
+}
+
+void Screen_DrawNextInit(PERIPHERAL per, uint8_t clear)
+{
+	// Check if displayed panel is correct
+	if (current_screen != INIT_SCREEN)
+		return G_ERROR;
+
+	switch(per)
+	{
+		case CAN:
+			// If clear is needed overwrite
+			if (clear == 0x01)
+			{
+				Screen_Draw_HeaderJustified(135, "CAN init", 8, &Font12, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(150, "Servo0 init", 11, &Font8, LCD_BACKGROUND);
+				return G_SUCCESS;
+			}
+			// If write is needed clear previous sequence
+			Screen_DrawNextInit(0xFF, 0x01);
+			Screen_Draw_HeaderJustified(135, "CAN init", 8, &Font12, WHITE);
+			Screen_Draw_HeaderJustified(150, "Servo0 init", 11, &Font8, WHITE);
+			break;
+		case SERVO_0:
+			// If clear is needed overwrite
+			if (clear == 0x01)
+			{
+				Screen_Draw_HeaderJustified(125, "CAN init", 8, &Font8, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(135, "Servo0 init", 11, &Font12, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(150, "Servo1 init", 11, &Font8, LCD_BACKGROUND);
+				return G_SUCCESS;
+			}
+			// If write is needed clear previous sequence
+			Screen_DrawNextInit(CAN, 0x01);
+			Screen_Draw_HeaderJustified(125, "CAN init", 8, &Font8, DARK_GREEN);
+			Screen_Draw_HeaderJustified(135, "Servo0 init", 11, &Font12, WHITE);
+			Screen_Draw_HeaderJustified(150, "Servo1 init", 11, &Font8, WHITE);
+			break;
+
+		case SERVO_1:
+			// If clear is needed overwrite
+			if (clear == 0x01)
+			{
+				Screen_Draw_HeaderJustified(125, "Servo0 init", 11, &Font8, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(135, "Servo1 init", 11, &Font12, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(150, "Acc0 init", 9, &Font8, LCD_BACKGROUND);
+				return G_SUCCESS;
+			}
+			// If write is needed clear previous sequence
+			Screen_DrawNextInit(SERVO_0, 0x01);
+			Screen_Draw_HeaderJustified(125, "Servo0 init", 11, &Font8, DARK_GREEN);
+			Screen_Draw_HeaderJustified(135, "Servo1 init", 11, &Font12, WHITE);
+			Screen_Draw_HeaderJustified(150, "Acc0 init", 9, &Font8, WHITE);
+			break;
+
+		case ACC_0:
+			// If clear is needed overwrite
+			if (clear == 0x01)
+			{
+				Screen_Draw_HeaderJustified(125, "Servo1 init", 11, &Font8, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(135, "Acc0 init", 9, &Font12, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(150, "Acc1 init", 9, &Font8, LCD_BACKGROUND);
+				return G_SUCCESS;
+			}
+			// If write is needed clear previous sequence
+			Screen_DrawNextInit(SERVO_1, 0x01);
+			Screen_Draw_HeaderJustified(125, "Servo1 init", 11, &Font8, DARK_GREEN);
+			Screen_Draw_HeaderJustified(135, "Acc0 init", 9, &Font12, WHITE);
+			Screen_Draw_HeaderJustified(150, "Acc1 init", 9, &Font8, WHITE);
+			break;
+		case ACC_1:
+			// If clear is needed overwrite
+			if (clear == 0x01)
+			{
+				Screen_Draw_HeaderJustified(125, "Acc0 init", 9, &Font8, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(135, "Acc1 init", 9, &Font12, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(150, "SD init", 7, &Font8, LCD_BACKGROUND);
+				return G_SUCCESS;
+			}
+			// If write is needed clear previous sequence
+			Screen_DrawNextInit(ACC_0, 0x01);
+			Screen_Draw_HeaderJustified(125, "Acc0 init", 9, &Font8, DARK_GREEN);
+			Screen_Draw_HeaderJustified(135, "Acc1 init", 9, &Font12, WHITE);
+			Screen_Draw_HeaderJustified(150, "SD init", 7, &Font8, WHITE);
+			break;
+		case SD:
+			// If clear is needed overwrite
+			if (clear == 0x01)
+			{
+				Screen_Draw_HeaderJustified(125, "Acc1 init", 9, &Font8, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(135, "SD init", 7, &Font12, LCD_BACKGROUND);
+				Screen_Draw_HeaderJustified(150, "Done", 4, &Font8, LCD_BACKGROUND);
+				return G_SUCCESS;
+			}
+			// If write is needed clear previous sequence
+			Screen_DrawNextInit(ACC_1, 0x01);
+			Screen_Draw_HeaderJustified(125, "Acc1 init", 9, &Font8, DARK_GREEN);
+			Screen_Draw_HeaderJustified(135, "SD init", 7, &Font12, WHITE);
+			Screen_Draw_HeaderJustified(150, "Done", 4, &Font8, WHITE);
+			break;
+
+		default:
+			if(clear == 0x00)
+			{
+				Screen_DrawNextInit(SD, 0x01);
+				Screen_Draw_HeaderJustified(135, "Done", 4, &Font12, DARK_GREEN);
+				return G_SUCCESS;
+			}
+			Screen_Draw_HeaderJustified(135, "Done", 4, &Font12, LCD_BACKGROUND);
+			Screen_Draw_HeaderJustified(135, "Initializing", 12, &Font12, LCD_BACKGROUND);
+			Screen_Draw_HeaderJustified(150, "Please wait", 11, &Font8, LCD_BACKGROUND);
+			break;
+	}
+
+	return G_SUCCESS;
 }
 
 
@@ -134,6 +249,40 @@ void Screen_DrawInfoScreen()
 	current_screen = INFO_SCREEN;
 }
 
+ReturnCode Screen_UpdateStatus(PERIPHERAL per, uint8_t is_ok)
+{
+	// Check if displayed panel is correct
+	if (current_screen != INFO_SCREEN)
+		return G_ERROR;
+
+	uint16_t color = is_ok == 0x01 ? DARK_GREEN : DARK_RED;
+	switch(per)
+	{
+		case SERVO_0:
+			LCD_DisplayString(5, STATUS_INFO_OFF_Y, "S1", &Font8, BLACK, color);
+			break;
+		case SERVO_1:
+			LCD_DisplayString(25, STATUS_INFO_OFF_Y, "S2", &Font8, BLACK, color);
+			break;
+		case ACC_0:
+			LCD_DisplayString(45, STATUS_INFO_OFF_Y, "A1", &Font8, BLACK, color);
+			break;
+		case ACC_1:
+			LCD_DisplayString(65, STATUS_INFO_OFF_Y, "A2", &Font8, BLACK, color);
+			break;
+		case SD:
+			LCD_DisplayString(85, STATUS_INFO_OFF_Y, "SD", &Font8, BLACK, color);
+			break;
+		case CAN:
+			LCD_DisplayString(105, STATUS_INFO_OFF_Y, "CAN", &Font8, BLACK, color);
+			break;
+		default:
+			return G_ERROR;
+	}
+
+	return G_SUCCESS;
+}
+
 ReturnCode Screen_UpdateData(PERIPHERAL per, float* data, uint8_t length)
 {
 	// Check if displayed panel is correct
@@ -142,7 +291,6 @@ ReturnCode Screen_UpdateData(PERIPHERAL per, float* data, uint8_t length)
 
 	// Get position to which data should be written to
 	uint8_t x, y;
-
 	switch(per)
 	{
 		case SERVO_0:

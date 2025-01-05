@@ -10,12 +10,12 @@
 #define DARK_GREY 0x4A69
 
 typedef enum PERIPHERAL{
-	SERVO_0 = 0x00,
-	SERVO_1 = 0x01,
-	ACC_0 = 0x02,
-	ACC_1 = 0x03,
-	SD = 0x04,
-	CAN = 0x05
+	CAN = 0x00,
+	SERVO_0 = 0x01,
+	SERVO_1 = 0x02,
+	ACC_0 = 0x03,
+	ACC_1 = 0x04,
+	SD = 0x05
 }PERIPHERAL;
 
 typedef enum SCREEN{
@@ -26,6 +26,8 @@ typedef enum SCREEN{
 void Screen_Init();
 void Screen_DrawInitScreen();
 
+void Screen_DrawNextInit(PERIPHERAL per, uint8_t clear);
 ReturnCode Screen_UpdateData(PERIPHERAL per, float* data, uint8_t length);
+ReturnCode Screen_UpdateStatus(PERIPHERAL per, uint8_t is_ok);
 
 #endif /* USER_LIBS_LCD_LCD_DRIVER_H_ */

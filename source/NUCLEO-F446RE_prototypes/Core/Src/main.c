@@ -95,13 +95,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   Screen_Init();
-  Screen_DrawInfoScreen();
-  float data[] = {21.37, -45.3, 1.3};
-  Screen_UpdateData(ACC_0, &data, 3);
-  Screen_UpdateData(ACC_1, &data, 3);
-  Screen_UpdateData(SERVO_0, &data, 2);
-  Screen_UpdateData(SERVO_1, &data, 2);
+  Screen_DrawInitScreen();
 
+  for (uint8_t i = 0; i <= 0x06; i++)
+  {
+	  Screen_DrawNextInit(i, 0x00);
+	  HAL_Delay(1000);
+  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
