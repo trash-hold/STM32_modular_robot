@@ -87,6 +87,11 @@ void Error_Handler(void);
 #define LCD_RST_GPIO_Port GPIOC
 #define LCD_CS_Pin GPIO_PIN_0
 #define LCD_CS_GPIO_Port GPIOC
+
+// uSD card defines
+#define SD_CS_Pin GPIO_PIN_0
+#define SD_CS_GPIO_Port GPIOC
+#define SD_SPI_HANDLE hspi2
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus
