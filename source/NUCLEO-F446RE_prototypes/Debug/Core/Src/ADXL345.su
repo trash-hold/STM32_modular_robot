@@ -1,6 +1,0 @@
-../Core/Src/ADXL345.c:7:6:AccAdd_I2CHandler	16	static
-../Core/Src/ADXL345.c:12:12:AccCmd	32	static
-../Core/Src/ADXL345.c:24:12:AccRead	40	static
-../Core/Src/ADXL345.c:36:12:AccRawMeasurment	24	static
-../Core/Src/ADXL345.c:51:12:AccAvgMeasurment	32	static
-../Core/Src/ADXL345.c:82:12:AccSelfTest	24	static
