@@ -74,6 +74,26 @@ void Error_Handler(void);
 
 /* USER CODE BEGIN Private defines */
 
+// uSD card defines
+#define SD_CS_Pin GPIO_PIN_11
+#define SD_CS_GPIO_Port GPIOA
+#define SD_SPI_HANDLE hspi2
+
+// LCD defines
+#define SPI1_SCK_Pin GPIO_PIN_10
+#define SPI1_SCK_GPIO_Port GPIOC
+#define SPI1_MISO_Pin GPIO_PIN_11
+#define SPI1_MISO_GPIO_Port GPIOC
+#define SPI1_MOSI_Pin GPIO_PIN_1
+#define SPI1_MOSI_GPIO_Port GPIOC
+#define LCD_BL_Pin GPIO_PIN_3
+#define LCD_BL_GPIO_Port GPIOC
+#define LCD_DC_Pin GPIO_PIN_0
+#define LCD_DC_GPIO_Port GPIOB
+#define LCD_RST_Pin GPIO_PIN_2
+#define LCD_RST_GPIO_Port GPIOC
+#define LCD_CS_Pin GPIO_PIN_0
+#define LCD_CS_GPIO_Port GPIOC
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

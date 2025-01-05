@@ -30,18 +30,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include <stdio.h>
-#include <string.h>
-#include "sd_card.h"
-//#include <stdarg.h> //for va_list var arg functions
-#include "ADXL345.h"
+//#include "ADXL345.h"
 #include "error_codes.h"
 #include "trig.h"
-
-//#include "DEV_config.h"
-//#include "LCD.h"
-#include "LCD_driver.h"
-
+#include "ST3020_servo.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -53,6 +45,14 @@
 /* USER CODE BEGIN PD */
 #define ADXL345_ALT_ADR 0xA6 // val shifted left
 #define PWR_CTR_REG 0x2D
+
+// REGISTERS
+#define ACC_REG 41
+
+// COMMANDS
+#define WRITE_INST 0x03
+#define READ_INST 0x02
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -75,11 +75,85 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t i2c_tx_buff[2];
-uint8_t rx_buff[6];
-int16_t i2c_rx_buff[3];
-float angles[3];
-int16_t x, y, z;
+uint8_t servo_tx_buff[13];
+uint8_t servo_rx_buff[10];
+
+void TempServoSetPos(uint8_t id, uint16_t pos, uint8_t* buff)
+{
+	HAL_StatusTypeDef status;
+	HAL_HalfDuplex_EnableTransmitter(&huart4);
+	// Declare operating speed
+	uint16_t speed = 3400;
+
+	// Fist sending two bytes of 0xFF
+	*buff = 0xFF;
+	*(buff + 1) = 0xFF;
+
+	// Sending transmission details
+	*(buff + 2) = id;
+	*(buff + 3) = 0x0A; 		// number of messages
+	*(buff + 4) = WRITE_INST;	// code of servo instruction
+	*(buff + 5) = ACC_REG;		// servo memory address
+	status = HAL_UART_Transmit(&huart4, buff, 6, HAL_MAX_DELAY);
+
+	uint8_t checksum = id + 0x0A + WRITE_INST + ACC_REG;
+
+	// Acceleration data
+	*(buff + 0) = (uint8_t) 50;
+	// Position data
+	*(buff + 1) = (uint8_t) (pos & 0x00FF);	// lower byte of position
+	*(buff + 2) = (uint8_t) ((pos & 0xFF00) >> 8);	// higher byte of position
+	// Time data
+	*(buff + 3) = 0x00;	// lower  byte of time
+	*(buff + 4) = 0x00;	// higher  byte of time
+	// Speed data
+	*(buff + 5) = (uint8_t) (speed & 0x00FF);	// lower byte of speed
+	*(buff + 6) = (uint8_t) ((speed & 0xFF00) >> 8);	// higher byte of speed
+
+	for(int i = 0; i < 7; i++)
+	{
+		uint8_t data = *(buff + i);
+		checksum += data;
+	}
+
+	// Sending checksum
+	*(buff + 7) = ~checksum;
+	status = HAL_UART_Transmit(&huart4, buff, 8, HAL_MAX_DELAY);
+}
+
+void TempServoRead(uint8_t id, uint8_t memory_register, uint8_t len)
+{
+	HAL_StatusTypeDef status;
+	uint8_t checksum = 0;
+
+	HAL_HalfDuplex_EnableTransmitter(&huart4);
+	// Preparing receive request
+	// Fist sending two bytes of 0xFF
+	servo_tx_buff[0] = 0xFF;
+	servo_tx_buff[1] = 0xFF;
+
+	// Sending transmission details
+	servo_tx_buff[2] = id;
+	servo_tx_buff[3] = len + 2; 		// number of messages
+	servo_tx_buff[4] = READ_INST;	// code of servo instruction
+	servo_tx_buff[5] = memory_register;		// servo memory address
+	status = HAL_UART_Transmit(&huart4, servo_tx_buff, 6, HAL_MAX_DELAY);
+
+	// Adding params to checksum
+	for(uint8_t i = 2; i<6; i++)
+		checksum += servo_tx_buff[i];
+
+	// Ending transmission with zeros
+	servo_tx_buff[0] = len;
+	checksum += len;
+	servo_tx_buff[1] = ~checksum;
+	status = HAL_UART_Transmit(&huart4, servo_tx_buff, 2, HAL_MAX_DELAY);
+
+	HAL_HalfDuplex_EnableReceiver(&huart4);
+	// Waiting for data
+	status = HAL_UART_Receive(&huart4, servo_rx_buff, 8, 500);
+
+}
 /* USER CODE END 0 */
 
 /**
@@ -117,57 +191,46 @@ int main(void)
   MX_RTC_Init();
   MX_SPI3_Init();
   MX_I2C1_Init();
+  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
 
-  // Change ADXL345 operation mode into measurement
-  AccAdd_I2CHandler(&hi2c1);
-  i2c_tx_buff[0] = PWR_CTR_REG;
-  i2c_tx_buff[1] = 0x00;
+  Servo_AddControler(0x00, &huart4);
 
-  HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
-  i2c_tx_buff[0] = PWR_CTR_REG;
-  i2c_tx_buff[1] = 0x08;
-
-  status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
-
-  i2c_tx_buff[0] = 0x31;
-  i2c_tx_buff[1] = 0x01;
-
-  status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
-
-  /* USER CODE BEGIN 2 */
-
-  InitLogging(&hrtc);
-  Screen_Init();
-  Screen_DrawInitScreen();
-
-  for (uint8_t i = 0; i <= 0x06; i++)
-  {
-	  Screen_DrawNextInit(i, 0x00);
-	  HAL_Delay(1000);
-  }
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  //ReturnCode status = ServoPing(0x00, 0x01);
+	  ReturnCode status = ServoSetPos(0x00, 0x00, 3400, 50);
+	  HAL_Delay(1000);
+	  status = ServoRead(0x00, 0x38, servo_rx_buff, 4);
+	  status = ServoSetPos(0x00, 0x3FF, 3400, 10);
+	  status = ServoRead(0x00, 0x38, servo_rx_buff, 4);
 
 	  HAL_Delay(1000);
-	  // Read date and time
-	  SD_LogError(G_ERROR);
-
-
-	  // Manual measurement
-	  HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x32, 1, rx_buff, 6, 200);
-
-	  // Avg measurment
-	  AccAvgMeasurment(i2c_rx_buff, 32);
-	  //ReturnCode ret = AccSelfTest(i2c_rx_buff);
-	  GetTiltAngles(angles, i2c_rx_buff);
-
-
+	  TempServoSetPos(0x01, 0x00, servo_tx_buff);
 	  HAL_Delay(1000);
+	  TempServoRead(0x01, 0x38, 4);
+	  HAL_Delay(1000);
+
+	  uint16_t status_msg = ServoTemp(0x00);
+	  uint8_t temp = status_msg & 0xFF;
+	  ReturnCode msg = (ReturnCode) ((status_msg & 0xFF00) >> 8);
+
+	  /*
+	  status = ServoSetPos(0x00, 0x7FF, 3400, 10);
+	  HAL_Delay(1000);
+	  status = ServoSetPos(0x00, 0x3FF, 3400, 10);
+	  HAL_Delay(1000);
+	  status = ServoSetPos(0x00, 0x7FF, 3400, 10);
+	  HAL_Delay(1000);
+	  */
+
+
+	  //ServoRead(0x01, 0x38, 2);
+	  //                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       HAL_Delay(2000);
 
     /* USER CODE END WHILE */
 

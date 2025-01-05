@@ -1,10 +1,3 @@
-/*
- * ADXL345.h
- *
- *  Created on: Dec 17, 2024
- *      Author: Barabash
- */
-
 #ifndef INC_ADXL345_H_
 #define INC_ADXL345_H_
 

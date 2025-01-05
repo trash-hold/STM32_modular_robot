@@ -42,8 +42,10 @@ ReturnCode InitLogging(RTC_HandleTypeDef *handler)
     // Create/Open file for logging current day
     snprintf(file_name, sizeof(file_name), "log_%d%d_%d%d_%d%d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
 
-    if ( f_open(&file, file_name,  FA_OPEN_EXISTING | FA_CREATE_NEW) != FR_OK )
+    if ( f_open(&file, file_name, FA_OPEN_EXISTING | FA_CREATE_NEW ) != FR_OK )
 		return G_FILE_READ;
+
+    f_close(&file);
 
     state = SD_READY;
     return G_SUCCESS;
