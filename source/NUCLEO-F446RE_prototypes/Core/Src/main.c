@@ -95,104 +95,13 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   Screen_Init();
-  Sreen_DrawInitScreen();
-  /*
-  	LCD_SCAN_DIR Lcd_ScanDir = SCAN_DIR_DFT;//SCAN_DIR_DFT = D2U_L2R
-	LCD_Init( Lcd_ScanDir );
-	LCD_Clear(BLACK);
+  Screen_DrawInfoScreen();
+  float data[] = {21.37, -45.3, 1.3};
+  Screen_UpdateData(ACC_0, &data, 3);
+  Screen_UpdateData(ACC_1, &data, 3);
+  Screen_UpdateData(SERVO_0, &data, 2);
+  Screen_UpdateData(SERVO_1, &data, 2);
 
-	LCD_DisplayString(3, 10, "Gizmo Robot", &Font16, BLACK, WHITE);
-
-	int px_number = (sizeof(white_px_LUT) / sizeof(uint16_t)) / 2;
-	for(int i = 0; i < px_number; i++)
-	{
-		LCD_DrawPoint(white_px_LUT[i*2], white_px_LUT[i*2 + 1], WHITE, DOT_PIXEL_1X1, DOT_STYLE_DFT);
-	}
-
-	px_number = (sizeof(l_grey_px_LUT) / sizeof(uint16_t)) / 2;
-	for(int i = 0; i < px_number; i++)
-	{
-		LCD_DrawPoint(l_grey_px_LUT[i*2], l_grey_px_LUT[i*2 + 1], GRAY, DOT_PIXEL_1X1, DOT_STYLE_DFT);
-	}
-
-	px_number = (sizeof(d_grey_px_LUT) / sizeof(uint16_t)) / 2;
-	for(int i = 0; i < px_number; i++)
-	{
-		LCD_DrawPoint(d_grey_px_LUT[i*2], d_grey_px_LUT[i*2 + 1], 0x4a69, DOT_PIXEL_1X1, DOT_STYLE_DFT);
-	}
-
-	LCD_DisplayString(39, 125, "Servo init", &Font8, BLACK, GREEN);
-	LCD_DisplayString(36, 135, "Acc init", &Font12, BLACK, WHITE);
-	LCD_DisplayString(44, 150, "SD init", &Font8, BLACK, GRAY);
-
-	*/
-	/*---------------------------------------------------------------------------------
-					//LCD basic skill
-	---------------------------------------------------------------------------------*/
-	//LCD_Show();
-	/*
-	uint32_t PURPLE = 0x60cf;
-	uint32_t DARK_RED = 0xc186;
-	uint32_t DARK_GREEN = 0x2e69;
-	LCD_Clear(BLACK);
-	LCD_DisplayString(5, 5, "Information panel", &Font12, BLACK, WHITE);
-	LCD_DrawLine(0, 25, 128, 25, PURPLE, LINE_DOTTED, DOT_PIXEL_1X1);
-	LCD_DrawLine(0, 30, 128, 30, PURPLE, LINE_SOLID, DOT_PIXEL_2X2);
-
-	// Servo panel
-	LCD_DisplayString(20, 40, "Servo angles [deg]", &Font8, BLACK, WHITE);
-
-	LCD_DisplayString(5, 55, "Ref:  ", &Font8, BLACK, WHITE);
-	LCD_DisplayString(5, 65, "Meas: ", &Font8, BLACK, WHITE);
-
-	LCD_DisplayNum(35, 55, 21037, &Font8, BLACK, WHITE);
-	LCD_DisplayNum(35, 65, 21037, &Font8, BLACK, WHITE);
-	LCD_DrawLine(64, 55, 64, 75, PURPLE, LINE_DOTTED, DOT_PIXEL_1X1);
-
-	LCD_DisplayString(69, 55, "Ref:  ", &Font8, BLACK, WHITE);
-	LCD_DisplayString(69, 65, "Meas: ", &Font8, BLACK, WHITE);
-
-	LCD_DisplayNum(99, 55, 21037, &Font8, BLACK, WHITE);
-	LCD_DisplayNum(99, 65, 21037, &Font8, BLACK, WHITE);
-
-	// Acc panel
-	LCD_DrawLine(0, 80, 128, 80, PURPLE, LINE_DOTTED, DOT_PIXEL_1X1);
-	LCD_DisplayString(5, 85, "Module orientation [deg]", &Font8, BLACK, WHITE);
-	LCD_DisplayString(5, 100,  "A: ", &Font8, BLACK, WHITE);
-	LCD_DisplayString(5, 110, "B: ", &Font8, BLACK, WHITE);
-	LCD_DisplayString(5, 120, "C: ", &Font8, BLACK, WHITE);
-
-	LCD_DisplayNum(25, 100, 21037, &Font8, BLACK, WHITE);
-	LCD_DisplayNum(25, 110, 21037, &Font8, BLACK, WHITE);
-	LCD_DisplayNum(25, 120, 21037, &Font8, BLACK, WHITE);
-
-	LCD_DrawLine(64, 100, 64, 130, PURPLE, LINE_DOTTED, DOT_PIXEL_1X1);
-
-	LCD_DisplayString(69, 100, "A: ", &Font8, BLACK, WHITE);
-	LCD_DisplayString(69, 110, "B: ", &Font8, BLACK, WHITE);
-	LCD_DisplayString(69, 120, "C: ", &Font8, BLACK, WHITE);
-
-	LCD_DisplayNum(89, 100, 21037, &Font8, BLACK, WHITE);
-	LCD_DisplayNum(89, 110, 21037, &Font8, BLACK, WHITE);
-	LCD_DisplayNum(89, 120, 21037, &Font8, BLACK, WHITE);
-
-	LCD_DrawLine(0, 140, 128, 140, PURPLE, LINE_SOLID, DOT_PIXEL_1X1);
-	LCD_DrawLine(0, 143, 128, 143, PURPLE, LINE_DOTTED, DOT_PIXEL_1X1);
-
-	// Status panel
-	LCD_DisplayString(5, 150, "S1", &Font8, BLACK, DARK_GREEN);
-	LCD_DisplayString(25, 150, "S2", &Font8, BLACK, DARK_RED);
-	LCD_DisplayString(45, 150, "A1", &Font8, BLACK, DARK_GREEN);
-	LCD_DisplayString(65, 150, "A2", &Font8, BLACK, DARK_RED);
-	LCD_DisplayString(85, 150, "SD", &Font8, BLACK, DARK_GREEN);
-	LCD_DisplayString(105, 150, "CAN", &Font8, BLACK, DARK_GREEN);
-	*/
-
-
-
-
-
-	Driver_Delay_ms(1000);
   /* USER CODE END 2 */
 
   /* Infinite loop */

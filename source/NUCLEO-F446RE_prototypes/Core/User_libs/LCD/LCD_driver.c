@@ -3,7 +3,7 @@
 #define SERVO_INFO_BLOCK_OFF_Y 40
 #define ACC_INFO_BLOCK_OFF_Y 85
 #define STATUS_INFO_OFF_Y 150
-#define SERVO_INFO_DATA_OFF 35
+#define SERVO_INFO_DATA_OFF 30
 #define ACC_INFO_DATA_OFF 25
 #define INFO_OFFSET 10
 #define INFO_BIG_OFFSET 15
@@ -93,8 +93,8 @@ void Screen_DrawInfoScreen()
 
 	for (int i = 0; i < 2; i++)
 	{
-		LCD_DisplayString(5 + i*69, SERVO_INFO_BLOCK_OFF_Y + INFO_BIG_OFFSET, "Ref:  ", &Font8, BLACK, WHITE);
-		LCD_DisplayString(5 + i*69, SERVO_INFO_BLOCK_OFF_Y + INFO_BIG_OFFSET + INFO_OFFSET, "Meas: ", &Font8, BLACK, WHITE);
+		LCD_DisplayString(5 + i*69, SERVO_INFO_BLOCK_OFF_Y + INFO_BIG_OFFSET, "Ref: ", &Font8, BLACK, WHITE);
+		LCD_DisplayString(5 + i*69, SERVO_INFO_BLOCK_OFF_Y + INFO_BIG_OFFSET + INFO_OFFSET, "Act: ", &Font8, BLACK, WHITE);
 	}
 
 	// Column separator
@@ -131,7 +131,56 @@ void Screen_DrawInfoScreen()
 	LCD_DisplayString(85, STATUS_INFO_OFF_Y, "SD", &Font8, BLACK, DARK_GREEN);
 	LCD_DisplayString(105, STATUS_INFO_OFF_Y, "CAN", &Font8, BLACK, DARK_GREEN);
 
-
+	current_screen = INFO_SCREEN;
 }
+
+ReturnCode Screen_UpdateData(PERIPHERAL per, float* data, uint8_t length)
+{
+	// Check if displayed panel is correct
+	if (current_screen != INFO_SCREEN)
+		return G_ERROR;
+
+	// Get position to which data should be written to
+	uint8_t x, y;
+
+	switch(per)
+	{
+		case SERVO_0:
+			x = SERVO_INFO_DATA_OFF;
+			y = SERVO_INFO_BLOCK_OFF_Y + INFO_BIG_OFFSET;
+			break;
+		case SERVO_1:
+			x = SERVO_INFO_DATA_OFF + 69;
+			y = SERVO_INFO_BLOCK_OFF_Y + INFO_BIG_OFFSET;
+			break;
+		case ACC_0:
+			x = ACC_INFO_DATA_OFF;
+			y = ACC_INFO_BLOCK_OFF_Y + INFO_BIG_OFFSET;
+			break;
+		case ACC_1:
+			x = ACC_INFO_DATA_OFF + 69;
+			y = ACC_INFO_BLOCK_OFF_Y + INFO_BIG_OFFSET;
+			break;
+		default:
+			return G_ERROR;
+	}
+
+	// Display value
+	char buff[7];
+	for(int i = 0; i < length; i++)
+	{
+		snprintf(buff, sizeof(buff), "%2.2f", *(data + i));
+
+		// Offset if there is '-' sign additionally
+		if( *(data + i) < 0)
+			LCD_DisplayString(x - 5, y + i * INFO_OFFSET, buff, &Font8, BLACK, WHITE);
+		else
+			LCD_DisplayString(x, y + i * INFO_OFFSET, buff, &Font8, BLACK, WHITE);
+	}
+
+	return G_SUCCESS;
+}
+
+
 
 
