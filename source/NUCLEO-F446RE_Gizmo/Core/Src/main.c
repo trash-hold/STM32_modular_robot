@@ -31,6 +31,8 @@
 #include "sd_card.h"
 #include "LCD_driver.h"
 #include "error_codes.h"
+#include "ADXL345.h"
+#include "trig.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -104,14 +106,17 @@ int main(void)
 
   // Start displaying
   Screen_Init();
-  Screen_DrawInitScreen();
+  Screen_DrawInfoScreen();
 
   // Init logs
   ReturnCode status = InitLogging(&hrtc);
   HAL_Delay(1000);
   status = SD_LogError(G_ERROR);
 
-  Screen_DrawNextInit(SD, 0x00);
+  AccAdd_I2CHandler(&hi2c1);
+  int16_t acc_meas[3];
+  float angles[3];
+  status = AccSelfTest(acc_meas);
 
   /* USER CODE END 2 */
 
@@ -119,6 +124,10 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	status = AccAvgMeasurment(acc_meas, 32);
+	GetTiltAngles(angles, acc_meas);
+
+	Screen_UpdateData(ACC_0, angles, 3);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
