@@ -102,6 +102,7 @@ int main(void)
   MX_SPI3_Init();
   MX_RTC_Init();
   MX_I2C1_Init();
+  MX_UART4_Init();
   /* USER CODE BEGIN 2 */
 
   // Start displaying
