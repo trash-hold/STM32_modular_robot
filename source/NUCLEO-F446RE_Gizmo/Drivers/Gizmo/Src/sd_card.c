@@ -1,4 +1,6 @@
 #include "sd_card.h"
+#include <stdio.h>
+
 
 // RTC
 static RTC_HandleTypeDef* rtc;
@@ -40,7 +42,7 @@ ReturnCode InitLogging(RTC_HandleTypeDef *handler)
 		return C_RTC_ERROR;
 
     // Create/Open file for logging current day
-    snprintf(file_name, sizeof(file_name), "log_%d%d_%d%d_%d%d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
+    snprintf(file_name, sizeof(file_name), "log_%1d%1d_%1d%1d_%1d%1d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
 
     if ( f_open(&file, file_name, FA_OPEN_EXISTING | FA_CREATE_NEW ) != FR_OK )
 		return G_FILE_READ;
@@ -57,6 +59,7 @@ ReturnCode StopLogging()
 		return G_ERROR;
 
 	state = SD_NOT_INIT;
+	return G_SUCCESS;
 }
 
 static ReturnCode SD_WriteTimestamp()
@@ -78,7 +81,7 @@ static ReturnCode SD_WriteTimestamp()
 	if (state == SD_UPDATE)
 	{
 		// Create/Open file for logging current day
-		snprintf(file_name, sizeof(file_name), "log_%d%d_%d%d_%d%d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
+		snprintf(file_name, sizeof(file_name), "log_%1d%1d_%1d%1d_%1d%1d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
 
 		state = SD_READY;
 	}
@@ -120,8 +123,25 @@ ReturnCode SD_LogError(ReturnCode error)
 	return G_SUCCESS;
 }
 
+ReturnCode SD_LogMsg(const char* string)
+{
+	if ( f_open(&file, file_name,FA_OPEN_APPEND | FA_WRITE) != FR_OK )
+		return G_FILE_WRITE;
+
+	for(uint16_t i = 0; *(string + i) != 0; i++)
+	{
+		f_putc(*(string + i), &file);
+	}
+
+	f_close(&file);
+
+	return G_SUCCESS;
+}
+
 void SD_AlarmRoutine()
 {
 	state = SD_UPDATE;
 }
+
+
 

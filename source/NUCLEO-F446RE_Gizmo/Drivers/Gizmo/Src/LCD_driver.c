@@ -1,4 +1,5 @@
 #include "LCD_driver.h"
+#include <stdio.h>
 
 #define SERVO_INFO_BLOCK_OFF_Y 40
 #define ACC_INFO_BLOCK_OFF_Y 85
@@ -71,7 +72,7 @@ void Screen_DrawInitScreen()
 	current_screen = INIT_SCREEN;
 }
 
-void Screen_DrawNextInit(PERIPHERAL per, uint8_t clear)
+ReturnCode Screen_DrawNextInit(PERIPHERAL per, uint8_t clear)
 {
 	// Check if displayed panel is correct
 	if (current_screen != INIT_SCREEN)

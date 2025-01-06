@@ -175,6 +175,8 @@ float LUT_ATan(float val)
 			return res;
 		}
 	}
+
+	return LUT_tan[LUT_SIZE -1];
 }
 
 void GetTiltAngles(float *abc_buffer, int16_t *xyz_acc)

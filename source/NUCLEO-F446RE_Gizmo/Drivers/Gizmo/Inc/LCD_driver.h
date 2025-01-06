@@ -26,7 +26,7 @@ typedef enum SCREEN{
 void Screen_Init();
 void Screen_DrawInitScreen();
 
-void Screen_DrawNextInit(PERIPHERAL per, uint8_t clear);
+ReturnCode Screen_DrawNextInit(PERIPHERAL per, uint8_t clear);
 ReturnCode Screen_UpdateData(PERIPHERAL per, float* data, uint8_t length);
 ReturnCode Screen_UpdateStatus(PERIPHERAL per, uint8_t is_ok);
 

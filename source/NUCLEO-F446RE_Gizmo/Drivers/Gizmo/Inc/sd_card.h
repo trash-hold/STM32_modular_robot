@@ -9,6 +9,7 @@
 ReturnCode InitLogging(RTC_HandleTypeDef *handler);
 ReturnCode StopLogging();
 ReturnCode SD_LogError(ReturnCode error);
+ReturnCode SD_LogMsg(const char* string);
 
 void SD_AlarmRoutine();
 
