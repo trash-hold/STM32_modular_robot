@@ -66,7 +66,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+uint8_t buffer[4];
 /* USER CODE END 0 */
 
 /**
@@ -108,49 +108,14 @@ int main(void)
   MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
 
-  // Start displaying
-  Screen_Init();
-  Screen_DrawInfoScreen();
-
-  // Init logs
-  ReturnCode status = InitLogging(&hrtc);
-  HAL_Delay(1000);
-  status = SD_LogError(G_ERROR);
-
-  AccAdd_I2CHandler(&hi2c1);
-  uint8_t buffer[6];
-  int16_t acc_meas[3];
-  float angles[3];
-  status = AccSelfTest(acc_meas);
-  status = Servo_AddControler(0x00, &huart4);
-  uint16_t current_pos;
-  status = ServoSetPos(0x00, 0xE4, 3400, 50);
-
-  char msg[36];
-
-
+  HAL_UART_Receive_IT(&huart2, buffer, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	uint16_t pos = 0x00;
-	for(uint16_t i = 0; i < 40; i++)
-	{
-		HAL_Delay(50);
-		status = ServoSetPos(0x00, pos, 1000, 50);
-		status = AccAvgMeasurment(acc_meas, 32);
-		GetTiltAngles(angles, acc_meas);
-		status = ServoCurrentPosition(0x00, &current_pos);
 
-		// Log
-		snprintf(msg, sizeof(msg), "%2d; %3d; %2.4f; %2.4f; %2.4f\n" , i, current_pos, angles[0], angles[1], angles[2]);
-		status = SD_LogMsg(msg);
-		pos += 0x0B;
-	}
-
-	SD_LogMsg("Finished series \n");
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -208,7 +173,17 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if(buffer[0] == 0x55)
+	{
+		uint8_t val = 0xAA;
+		HAL_UART_Transmit(&huart2, &val, 1, 100);
+	}
 
+
+	HAL_UART_Receive_IT(&huart2, buffer, 1);
+}
 /* USER CODE END 4 */
 
 /**
