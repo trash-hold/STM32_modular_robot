@@ -233,13 +233,11 @@ ReturnCode ServoPing(uint8_t servo_line, uint8_t id)
 }
 
 
-uint16_t ServoTemp(uint8_t servo_line)
+ReturnCode ServoTemp(uint8_t servo_line, uint8_t* temp)
 {
-	uint8_t temp = 0;
+	ReturnCode status = ServoRead(servo_line, SERVO_TEMP_REG, temp, 1);
 
-	ReturnCode status = ServoRead(servo_line, SERVO_TEMP_REG, &temp, 1);
-
-	return (((uint16_t) status  << 8) | temp);
+	return status;
 }
 
 ReturnCode ServoCurrentPosition(uint8_t servo_line, uint16_t* result)

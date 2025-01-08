@@ -301,6 +301,24 @@ void ServoRoutine(servo *servo)
 
 				return;
 			}
+			else if ( per_state->cmd == COM_SERVO_PING )
+			{
+				ReturnCode status = ServoPing(servo->servo_line, 0x01);
+				PeripheralUpdateState(servo->state, status);
+				status = COM_TransmitResponse(status, NULL, 0);
+
+				return;
+			}
+			else if ( per_state->cmd == COM_SERVO_READ_TEMP )
+			{
+				uint8_t temp;
+				ReturnCode status = ServoTemp(servo->servo_line, &temp);
+
+				PeripheralUpdateState(servo->state, status);
+				status = COM_TransmitResponse(status, &temp, 1);
+
+				return;
+			}
 
 		default:
 			return;

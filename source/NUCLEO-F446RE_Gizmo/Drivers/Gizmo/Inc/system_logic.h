@@ -69,6 +69,6 @@ extern uint16_t servo1_tx_buff[3];
 
 
 UART_OP_STATUS UART_Decode(uint8_t* msg_buffer);
-ReturnCode PeripheralUpdateState(peripheral_state* per, ReturnCode status);
+void PeripheralUpdateState(peripheral_state* per, ReturnCode status);
 
 #endif /* GIZMO_INC_SYSTEM_LOGIC_H_ */

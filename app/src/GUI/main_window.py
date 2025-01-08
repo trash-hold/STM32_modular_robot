@@ -1,14 +1,13 @@
 from PySide6.QtWidgets import *
-import serial
-import serial.tools
-import serial.tools.list_ports
+from ..datatypes.definitions import *
+from ..datatypes.serial_driver import *
 
 import time
 
 class ControlPanelGUI(QWidget):
     def __init__(self):
         super().__init__()
-        self.port = serial.Serial(baudrate = 115200, bytesize = 8, timeout = 5)
+        self.port = SerialDriver()
 
         self.initGUI()
 
@@ -52,10 +51,10 @@ class ControlPanelGUI(QWidget):
         data_operations_container = QHBoxLayout()
 
         send_pb = QPushButton("Send")
-        send_pb.clicked.connect(lambda: self.sendData(55))
+        send_pb.clicked.connect(lambda: self.sendData(UART_OP_CODES.COM_SERVO_POS_SET, bytearray([0x00, 0x00, 0xAA, 0x0B, 0xBB, 0x32])))
 
         receive_pb = QPushButton("Receive")
-        receive_pb.clicked.connect(lambda: self.receiveData())
+        receive_pb.clicked.connect(lambda: self.sendData(UART_OP_CODES.COM_SERVO_POS_READ, bytearray([0x00])))
         
         data_operations_container.addWidget(send_pb)
         data_operations_container.addWidget(receive_pb)
@@ -103,60 +102,9 @@ class ControlPanelGUI(QWidget):
             pb.setText("Disconnect")
             print("Connected")
 
-    def sendData(self, value):
-        if self.port.is_open == False:
-            return
+    def sendData(self, op_code: UART_OP_CODES, data: bytearray) -> None:
+        packet = self.port.transmit(op_code = op_code, data = data)
+        print(packet)
         
-        bytes_sent = 0
-        tx_buffer = bytearray([0x01, 0x02, 0x00, 0x00, 0xAA, 0x0B, 0xBB, 0x32, 0x50])
-        # First send the amount of data to receive
-        bytes_sent += self.port.write(b'\x0A')
-        # Then send remaining data 
-        bytes_sent += self.port.write(tx_buffer)
-        print("Send data: {0}".format(bytes_sent))
-        
-        # Wait for status msg
-        bytes_received = 0
-        upcoming = 0
-        while self.port.in_waiting == 0:
-            print("Waiting")
-
-        raw_upcoming: bytes = self.port.read(1)
-        upcoming = int.from_bytes(raw_upcoming) - 1
-        print("Raw: {0}, Decoded: {1}".format(raw_upcoming, upcoming))
-        data = self.port.read(upcoming)
-        
-        bytes_received = upcoming
-
-        print("Transmitted: {0}, Received data: {1}".format(bytes_sent, data))
-
-    def receiveData(self):
-        if self.port.is_open == False:
-            return
-        
-        #==============================================
-        # Request data transmission
-        #==============================================
-        bytes_sent = 0
-        
-        tx_buffer = bytearray([0x01, 0x01, 0x00, 0xF8])
-        # First send the amount of data to receive
-        bytes_sent += self.port.write(b'\x05')
-        # Then send remaining data 
-        bytes_sent += self.port.write(tx_buffer)
-
-        #==============================================
-        # Receive data
-        #==============================================
-        bytes_received = 0
-        while self.port.in_waiting == 0:
-            print("Waiting")
-        raw_upcoming: bytes = self.port.read(1)
-        upcoming = int.from_bytes(raw_upcoming) - 1
-        print("Raw: {0}, Decoded: {1}".format(raw_upcoming, upcoming))
-        data = self.port.read(upcoming)
-        bytes_received = upcoming
-
-        print("Transmitted: {0}, Received data: {1}".format(bytes_sent, data))
 
         
