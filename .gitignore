@@ -15,3 +15,4 @@ tools/fff/*
 **.o
 tests/build/**
 **/Debug/**
+**/__pycache__/**
