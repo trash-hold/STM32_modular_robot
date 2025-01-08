@@ -19,6 +19,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "can.h"
+#include "dma.h"
 #include "fatfs.h"
 #include "i2c.h"
 #include "rtc.h"
@@ -35,6 +36,7 @@
 #include "ADXL345.h"
 #include "trig.h"
 #include "ST3020_servo.h"
+#include "system_logic.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,12 +63,26 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
-
+void ServoRoutine(servo* servo);
+ReturnCode COM_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t buffer[4];
+uint8_t module_id = 0x01;
+
+// Uart DMA
+uint8_t tx_buffer_DMA[DMA_TX_SIZE];
+uint8_t rx_buffer_DMA[DMA_RX_SIZE];
+uint8_t header_received = 0x00;
+uint8_t header_sent = 0x00;
+
+//Peripherals
+peripheral_state Servo0, Servo1, Acc0, Acc1;
+peripheral_state *servo0, *servo1, *acc0, *acc1;
+
+uint16_t servo0_tx_buff[3];
+uint16_t servo1_tx_buff[3];
 /* USER CODE END 0 */
 
 /**
@@ -98,6 +114,7 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_USART2_UART_Init();
   MX_SDIO_SD_Init();
   MX_FATFS_Init();
@@ -108,13 +125,25 @@ int main(void)
   MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
 
-  HAL_UART_Receive_IT(&huart2, buffer, 1);
+	servo0 = &Servo0;
+	servo1 = &Servo1;
+	acc0 = &Acc0;
+	acc1 = &Acc1;
+
+	servo Servo0_struct = { servo0_tx_buff, 0x00, servo0};
+
+	Servo_AddControler(0x00, &huart4);
+	ServoSetPos(0x00, 0x00, 3400, 50);
+	HAL_UART_Receive_DMA(&huart2, rx_buffer_DMA, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+
+	  ServoRoutine(&Servo0_struct);
+
 
     /* USER CODE END WHILE */
 
@@ -173,16 +202,144 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+
+ReturnCode COM_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes)
 {
-	if(buffer[0] == 0x55)
+	uint8_t checksum = 0;
+	uint8_t transmit_size = 4;
+
+	if (bytes - 4 > DMA_TX_SIZE)
 	{
-		uint8_t val = 0xAA;
-		HAL_UART_Transmit(&huart2, &val, 1, 100);
+		// If transmit too big output error
+		transmit_size = 4;
+		status = G_COM_OVERFLOW;
+	}
+	else if( data != NULL)
+	{
+		for(uint16_t i = 0; i < bytes; i++)
+		{
+			// Write data to TX buffer
+			tx_buffer_DMA[i + 3] = *(data + i);
+			transmit_size++;
+
+			// Increment checksum
+			checksum += *(data + i);
+		}
 	}
 
+	checksum += transmit_size + module_id + status;
+	checksum = ~checksum;
 
-	HAL_UART_Receive_IT(&huart2, buffer, 1);
+	// Fill in standard frame
+	tx_buffer_DMA[0] = transmit_size;
+	tx_buffer_DMA[1] = module_id;
+	tx_buffer_DMA[2] = status;
+	tx_buffer_DMA[transmit_size - 1] = checksum;
+
+	header_sent = 0x01;
+	if ( HAL_UART_Transmit_DMA(&huart2, tx_buffer_DMA, 1) != HAL_OK )
+		return G_COM_TRANSMIT;
+
+	return G_SUCCESS;
+}
+
+void ServoRoutine(servo *servo)
+{
+	peripheral_state *per_state = servo->state;
+
+	switch( per_state->state )
+	{
+		case PER_IDLE:
+			return;
+
+		case PER_ERROR:
+			// Log error
+			per_state->state = PER_IDLE;
+			per_state->cmd = COM_IDLE;
+			return;
+
+		case PER_DONE:
+			// Log success
+			per_state->state = PER_IDLE;
+			per_state->cmd = COM_IDLE;
+			return;
+
+		case PER_WAITING:
+			if( per_state->cmd == COM_SERVO_POS_SET )
+			{
+				int16_t pos = *(servo->tx_buffer);
+
+				if (pos > SERVO_MAX_ANGLE)
+					pos = SERVO_MAX_ANGLE;
+				else if (pos < SERVO_MAX_ANGLE && pos < 0)
+					pos = -SERVO_MAX_ANGLE;
+
+				ReturnCode status = ServoSetPos(servo->servo_line, (uint16_t) pos, servo0_tx_buff[1], servo0_tx_buff[2]);
+				PeripheralUpdateState(servo->state, status);
+
+				status = COM_TransmitResponse(status, NULL, 0);
+				return;
+			}
+			else if( per_state->cmd == COM_SERVO_POS_READ)
+			{
+				uint16_t pos;
+				ReturnCode status = ServoCurrentPosition(servo->servo_line, &pos);
+				PeripheralUpdateState(servo->state, status);
+
+				if (status == G_SUCCESS)
+				{
+					// Translate pos into 2 bytes
+					uint8_t buff[] = { (( pos & 0xFF00) >> 8), (pos & 0x0FF)};
+
+					// Send response
+					status = COM_TransmitResponse(status, buff, 2);
+				}
+				else
+				{
+					status = COM_TransmitResponse(status, NULL, 0);
+				}
+
+				return;
+			}
+
+		default:
+			return;
+	}
+	return;
+}
+
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if( huart == &huart2)
+	{
+		// First messege wasn't received yet
+		if(header_received == 0x00)
+		{
+			HAL_UART_Receive_DMA(&huart2, rx_buffer_DMA + 1, rx_buffer_DMA[0] - 1);
+			header_received = 0x01;
+		}
+		else
+		{
+			// Change state of correct peripheral
+			UART_Decode(rx_buffer_DMA);
+
+			HAL_UART_Receive_DMA(&huart2, rx_buffer_DMA, 1);
+			header_received = 0x00;
+		}
+	}
+}
+
+void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+	if (huart == &huart2)
+	{
+		if(header_sent == 0x01)
+		{
+			header_sent = 0x00;
+			HAL_UART_Transmit_DMA(&huart2, tx_buffer_DMA + 1, tx_buffer_DMA[0] - 1);
+		}
+	}
 }
 /* USER CODE END 4 */
 
