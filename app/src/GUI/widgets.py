@@ -1,9 +1,91 @@
 # Imports from external modules
-from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QLabel, QSlider, QLineEdit
-from PySide6.QtGui import QDoubleValidator, QIntValidator
+from PySide6.QtWidgets import QVBoxLayout, QHBoxLayout, QPushButton, QWidget, QLabel, QSlider, QLineEdit, QFrame, QSplitter
+from PySide6.QtGui import QDoubleValidator, QIntValidator, QFont
 
 import PySide6.QtCore as QtC
 from enum import Enum
+
+class HeaderLabel(QLabel):
+    def __init__(self, name):
+        super().__init__(name)
+        self.setStyleSheet(".HeaderLabel{font-size: 16px; margin-left: 10px}")
+
+class Separator(QFrame):
+    def __init__(self):
+        super().__init__()
+
+        self.setStyleSheet(".Separator{border: 1px solid gray; background: gray; margin-left: 20px; margin-right: 20px}")
+        self.setFrameShape(QFrame.Shape.HLine)
+
+class BorderFrame(QFrame):
+    def __init__(self):
+        super().__init__()
+        self.setStyleSheet(".BorderFrame{border: 3px solid green; border-radius: 10px}")
+
+class InputArray(QWidget):
+    def __init__(self, data_list: list):
+        super().__init__()
+
+        self.data = data_list
+        self.inputs = list()
+
+        self.create_widget()
+
+    def __count__(self)->int:
+        if self.data is None:
+            return None
+        
+        return len(self.data)
+    
+    def create_widget(self):
+        if self.data is None:
+            return
+        
+        main_container = QHBoxLayout()
+        for box in self.data:
+            info_box = QWidget()
+            container = QVBoxLayout()
+
+            # Create label
+            label = QLabel(box[0])
+            container.addWidget(label)
+
+            # Create value box
+            if isinstance(box[1], float):
+                validator = QDoubleValidator(decimals=2)
+                line = QLineEdit()
+                line.setText("0.00")
+                line.setReadOnly(True)
+                line.setValidator(validator)
+
+                self.inputs.append(line)
+                container.addWidget(line)
+
+            elif isinstance(box[1], int):
+                validator = QIntValidator()
+                line = QLineEdit()
+                line.setText("0")
+                line.setReadOnly(True)
+                line.setValidator(validator)
+
+                self.inputs.append(line)
+                container.addWidget(line)
+
+            elif isinstance(box[1], str):
+                line = QLineEdit()
+                line.setReadOnly(True)
+                line.setText("---")
+
+                self.inputs.append(line)
+                container.addWidget(line)
+
+            # Finalize creation
+            info_box.setLayout(container)
+            main_container.addWidget(info_box)
+
+        self.setLayout(main_container)
+
+
 
 class FloatSlider(QWidget):
     valueChange = QtC.Signal(float)
@@ -104,14 +186,16 @@ class ServoPanel(QWidget):
 
         self.movement_parameters = [0, 0, 0]
         self.info_widgets = list()
+        self.name = name
 
         self.create_widget()
 
     def create_widget(self) -> None:
         # Layout 
-        main_container = QVBoxLayout()
-        slider_container = QVBoxLayout()
+        frame = BorderFrame()
 
+        main_container = QVBoxLayout(frame)
+        slider_container = QVBoxLayout()
         #==============================================
         # Sliders
         #==============================================
@@ -132,51 +216,11 @@ class ServoPanel(QWidget):
         #==============================================
         # Info panel
         #==============================================
-        info_panel = QWidget()
-        info_panel_container = QHBoxLayout()
+
         info = [["Current position [deg]", 0.0] , ["Temperature [deg C]", 0], ["Status", ""]]
-        for box in info:
-            info_box = QWidget()
-            container = QVBoxLayout()
+        info_panel = InputArray(info)
+        self.info_widgets = info_panel.inputs
 
-            # Create label
-            label = QLabel(box[0])
-            container.addWidget(label)
-
-            # Create value box
-            if isinstance(box[1], float):
-                validator = QDoubleValidator(decimals=2)
-                line = QLineEdit()
-                line.setText("0.00")
-                line.setReadOnly(True)
-                line.setValidator(validator)
-
-                self.info_widgets.append(line)
-                container.addWidget(line)
-
-            elif isinstance(box[1], int):
-                validator = QIntValidator()
-                line = QLineEdit()
-                line.setText("0")
-                line.setReadOnly(True)
-                line.setValidator(validator)
-
-                self.info_widgets.append(line)
-                container.addWidget(line)
-
-            elif isinstance(box[1], str):
-                line = QLineEdit()
-                line.setReadOnly(True)
-                line.setText("---")
-
-                self.info_widgets.append(line)
-                container.addWidget(line)
-
-            # Finalize creation
-            info_box.setLayout(container)
-            info_panel_container.addWidget(info_box)
-
-        info_panel.setLayout(info_panel_container)
         
         #==============================================
         # COM buttons
@@ -225,13 +269,21 @@ class ServoPanel(QWidget):
         com_buttons_container.addWidget(read_com_widget)
         com_buttons.setLayout(com_buttons_container)
         
+        seprator_controls = Separator()
+        seprator_info = Separator()
 
         # Add all panels
         main_container.addWidget(sliders)
+        main_container.addWidget(seprator_controls)
         main_container.addWidget(info_panel)
+        main_container.addWidget(seprator_info)
         main_container.addWidget(com_buttons)
 
-        self.setLayout(main_container)
+        # Establish layout
+        name_label = HeaderLabel(self.name)
+        layout = QVBoxLayout(self)
+        layout.addWidget(name_label)
+        layout.addWidget(frame)
 
     def movementChange(self, value: float, slider_type: SliderType) -> None:
         if slider_type == self.SliderType.POS:
@@ -259,3 +311,63 @@ class ServoPanel(QWidget):
 
     def writeStatus(self, value) -> None:
         self.updateInfo(value, self.InfoBox.STATUS)
+
+
+class AccelerometerPanel(QWidget):
+    request_angles = QtC.Signal()
+    request_status = QtC.Signal()
+
+    def __init__(self, name):
+        super().__init__()
+
+        self.info_widgets = []
+        self.name = name
+
+        self.create_widget()
+
+    def create_widget(self) -> None:
+        # Layout 
+        frame = BorderFrame()
+        main_container = QVBoxLayout(frame)
+
+        #==========================================
+        # Data
+        #==========================================
+        labels = [["A", 0.00], ["B", 0.00], ["C", 0.00], ["Status", '']]
+        data_panel = InputArray(labels)
+
+        for widget in data_panel.inputs:
+            self.info_widgets.append(widget)
+
+        #==========================================
+        # COM buttons
+        #==========================================
+        pb_panel = QWidget()
+        pb_container = QHBoxLayout(pb_panel)
+        status_pb = QPushButton("Get status")
+        angles_pb = QPushButton("Get angles")
+
+        angles_pb.clicked.connect(lambda: self.request_angles.emit())
+        status_pb.clicked.connect(lambda: self.request_status.emit())
+        pb_container.addWidget(angles_pb)
+        pb_container.addWidget(status_pb)
+
+        #==========================================
+        # Add widgets
+        #==========================================
+        main_container.addWidget(data_panel)
+        main_container.addWidget(pb_panel)
+
+        # Establish layout
+        name_label = HeaderLabel(self.name)
+
+        layout = QVBoxLayout(self)
+        layout.addWidget(name_label)
+        layout.addWidget(frame)
+
+    def writeAngles(self, ang: list) -> None:
+        for index in range(0,3):
+            self.inputs[index].setText(ang[index])
+
+    def writeStatus(self, value) -> None:
+        self.updateInfo(value, self.inputs)

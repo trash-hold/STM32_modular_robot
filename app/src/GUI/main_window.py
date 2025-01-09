@@ -2,7 +2,7 @@ from PySide6.QtWidgets import *
 from ..datatypes.definitions import *
 from ..datatypes.serial_driver import *
 
-from .widgets import ServoPanel
+from .widgets import ServoPanel, AccelerometerPanel, Separator
 
 import time
 
@@ -22,6 +22,10 @@ class ControlPanelGUI(QWidget):
         com_port_widget = QWidget()
         com_port_container = QHBoxLayout()
 
+        com_port_widget.setObjectName("com_port_widget")
+        com_port_container.setObjectName("com_port_container")
+        com_port_widget.setStyleSheet("QWidget#com_port_widget {background-color: darkGreen; margin: 0px}")
+
         # List all com ports
         port_list_widget = QComboBox()
         com_ports = serial.tools.list_ports.comports()
@@ -40,6 +44,9 @@ class ControlPanelGUI(QWidget):
         # Connect widget
         port_list_widget.currentIndexChanged.connect(lambda: self.connectionCOMPort(False, connect_port))
         port_list_widget.currentIndexChanged.connect(lambda index: self.changeCOMPort(index))
+
+        split = Separator()
+        split.setStyleSheet('''border: 3px solid green''')
 
         # Add widgets
         com_port_container.addWidget(port_list_widget)
@@ -69,10 +76,23 @@ class ControlPanelGUI(QWidget):
         servo_panel.setLayout(servo_panel_container)
 
         #==================================
+        # Accelerometer  panel
+        #==================================
+        acc_panel = QWidget()
+        acc_panel_container = QHBoxLayout(acc_panel)
+
+        acc0 = AccelerometerPanel("Accelerometer  0")
+        acc1 = AccelerometerPanel("Accelerometer  1")
+
+        acc_panel_container.addWidget(acc0)
+        acc_panel_container.addWidget(acc1)
+
+        #==================================
         # Main layout
         #==================================
         layout.addWidget(com_port_widget)
         layout.addWidget(servo_panel)
+        layout.addWidget(acc_panel)
         self.setLayout(layout)
 
     def changeCOMPort(self, index: int) -> None:

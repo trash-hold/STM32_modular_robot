@@ -132,6 +132,7 @@ int main(void)
   /* USER CODE BEGIN 2 */
   	InitLogging(&hrtc);
   	Screen_Init();
+  	Screen_DrawInitScreen();
   	Screen_DrawInfoScreen();
 
 	servo0 = &Servo0;
