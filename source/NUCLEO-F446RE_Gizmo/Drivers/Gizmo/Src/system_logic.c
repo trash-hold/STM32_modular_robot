@@ -41,6 +41,7 @@ UART_OP_STATUS UART_Decode(uint8_t* msg_buffer)
 	switch( *(msg_buffer + CMD_POS_BYTE))
 	{
 		case COM_SERVO_POS_READ:
+		{
 			// Check if there is enough data
 			if(data_bytes != 5)
 				return UART_ERROR;
@@ -50,11 +51,13 @@ UART_OP_STATUS UART_Decode(uint8_t* msg_buffer)
 				return PeripheralAddCMD(servo0, COM_SERVO_POS_READ);
 
 			else if ( *(msg_buffer + SERVO_LINE_BYTE) == 0x01)
-				return PeripheralAddCMD(servo0, COM_SERVO_POS_READ);
+				return PeripheralAddCMD(servo1, COM_SERVO_POS_READ);
 
 			return UART_ERROR;
+		}
 
 		case COM_SERVO_POS_SET:
+		{
 			// Check if there is enough data
 			if(data_bytes != 10)
 				return UART_ERROR;
@@ -82,7 +85,51 @@ UART_OP_STATUS UART_Decode(uint8_t* msg_buffer)
 			*(buffer + 2) = (uint16_t) *(msg_buffer + + SERVO_LINE_BYTE + 5);
 
 			return UART_OK;
+		}
 
+		case COM_SERVO_READ_TEMP:
+		{
+			// Check if there is enough data
+			if(data_bytes != 5)
+				return UART_ERROR;
+
+			uint8_t servo_line = *(msg_buffer + SERVO_LINE_BYTE);
+			// Servo line id
+			if( servo_line == 0x00)
+			{
+				if ( PeripheralAddCMD(servo0, COM_SERVO_READ_TEMP) != UART_OK )
+					return UART_ERROR;
+			}
+			else if ( servo_line == 0x01 )
+			{
+				if ( PeripheralAddCMD(servo1, COM_SERVO_READ_TEMP) != UART_OK )
+					return UART_ERROR;
+			}
+
+			return UART_ERROR;
+		}
+
+		case COM_SERVO_PING:
+		{
+			// Check if there is enough data
+			if(data_bytes != 5)
+				return UART_ERROR;
+
+			uint8_t servo_line = *(msg_buffer + SERVO_LINE_BYTE);
+			// Servo line id
+			if( servo_line == 0x00)
+			{
+				if ( PeripheralAddCMD(servo0, COM_SERVO_PING) != UART_OK )
+					return UART_ERROR;
+			}
+			else if ( servo_line == 0x01 )
+			{
+				if ( PeripheralAddCMD(servo1, COM_SERVO_PING) != UART_OK )
+					return UART_ERROR;
+			}
+
+			return UART_ERROR;
+		}
 		default:
 			return UART_ERROR;
 	}

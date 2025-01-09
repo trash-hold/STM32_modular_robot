@@ -34,18 +34,46 @@ class SerialDataPacket():
         
         return True
     
-    def get_data(self) -> list:
-        print("XD")
+    def get_data(self, op_code: UART_OP_CODES) -> list:
+        if op_code == UART_OP_CODES.COM_SERVO_POS_READ:
+            if len(self.rx) != 6:
+                return None
+            
+            lower_byte = self.rx[4]
+            higher_byte = self.rx[3]
+
+            pos = (higher_byte << 8) | (lower_byte)
+            return [pos]
+        
+        elif op_code == UART_OP_CODES.COM_SERVO_READ_TEMP:
+            if len(self.rx) != 5:
+                return None
+            
+            pos = self.rx[3]
+            return [pos]
+        
+        elif op_code == UART_OP_CODES.COM_SERVO_PING:
+            if len(self.rx) != 4:
+                return None
+            
+            pos = UART_STATUS_CODES(self.rx[2]).name
+            return [pos]
 
 
 class SerialDriver(serial.Serial):
     def __init__(self):
         super().__init__(baudrate = UART_DEF_BAUDRATE, bytesize = 8, timeout = UART_TIMEOUT )
+        self.busy = False
 
     def transmit(self, op_code: UART_OP_CODES, data: bytearray, module_id:int = 0x01,) -> SerialDataPacket: 
         # Check if port is open
         if self.is_open == False:
             return None
+        
+        if self.busy == True:
+            return None
+        
+        self.busy = True
         #====================================
         # Prepare data
         #====================================
@@ -53,7 +81,7 @@ class SerialDriver(serial.Serial):
         data_len = len(data) + 0x04
         tx_buffer = bytearray([data_len, module_id, op_code.value])
         # Append data
-        if len(data) != 0:
+        if data is not None:
             tx_buffer.extend(data)
         # Calculate checksum
         checksum = sum(tx_buffer)
@@ -84,45 +112,11 @@ class SerialDriver(serial.Serial):
         data_len = int.from_bytes(raw_byte) - 1
 
         rx_bytes = self.read(data_len)
+        rx_buffer = bytearray( [int.from_bytes(raw_byte)] )
+        rx_buffer.extend(rx_bytes)
 
         print("Succesful transmission!")
-        print("TX_bytes: {0}, RX_bytes: {1}, TX_buff {2}, RX_buff {3}".format(tx_bytes, len(rx_bytes) + 1, bytes(tx_buffer).hex(), bytes(rx_bytes).hex()))
-        return SerialDataPacket(tx_bytes, len(rx_bytes) + 1, tx_buffer, rx_bytes, start_time)
-    
-    def transmittemp(self, op_code: UART_OP_CODES, data: bytearray, module_id:int = 0x01,) -> SerialDataPacket: 
-        if self.is_open == False:
-            return
-        
-        bytes_sent = 0
-        tx_buffer = bytearray([0x01, 0x02, 0x00, 0x00, 0xAA, 0x0B, 0xBB, 0x32, 0x50])
-        # First send the amount of data to receive
-        bytes_sent += self.write(b'\x0A')
-        # Then send remaining data 
-        bytes_sent += self.write(tx_buffer)
-        print("Send data: {0}".format(bytes_sent))
-        
-        # Wait for status msg
-        bytes_received = 0
-        upcoming = 0
-        while self.in_waiting == 0:
-            print("Waiting")
+        print("TX_bytes: {0}, RX_bytes: {1}, TX_buff {2}, RX_buff {3}".format(tx_bytes, len(rx_buffer) + 1, bytes(tx_buffer).hex(), bytes(rx_buffer).hex()))
 
-        raw_upcoming: bytes = self.read(1)
-        upcoming = int.from_bytes(raw_upcoming) - 1
-        print("Raw: {0}, Decoded: {1}".format(raw_upcoming, upcoming))
-        data = self.read(upcoming)
-        
-        bytes_received = upcoming
-
-        print("Transmitted: {0}, Received data: {1}".format(bytes_sent, data))
-
-
-        
-
-        
-
-        
-
-        
-
-
+        self.busy = False
+        return SerialDataPacket(tx_bytes, len(rx_buffer), tx_buffer, rx_buffer, start_time)

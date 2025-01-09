@@ -2,6 +2,8 @@ from PySide6.QtWidgets import *
 from ..datatypes.definitions import *
 from ..datatypes.serial_driver import *
 
+from .widgets import ServoPanel
+
 import time
 
 class ControlPanelGUI(QWidget):
@@ -45,26 +47,32 @@ class ControlPanelGUI(QWidget):
         com_port_widget.setLayout(com_port_container)
 
         #==================================
-        # Data send
+        # Servo panel
         #==================================
-        data_operations = QWidget()
-        data_operations_container = QHBoxLayout()
+        servo_panel = QWidget()
+        servo_panel_container = QHBoxLayout()
 
-        send_pb = QPushButton("Send")
-        send_pb.clicked.connect(lambda: self.sendData(UART_OP_CODES.COM_SERVO_POS_SET, bytearray([0x00, 0x00, 0xAA, 0x0B, 0xBB, 0x32])))
+        servo0 = ServoPanel("Servo 0")
+        servo1 = ServoPanel("Servo 1")
 
-        receive_pb = QPushButton("Receive")
-        receive_pb.clicked.connect(lambda: self.sendData(UART_OP_CODES.COM_SERVO_POS_READ, bytearray([0x00])))
-        
-        data_operations_container.addWidget(send_pb)
-        data_operations_container.addWidget(receive_pb)
-        data_operations.setLayout(data_operations_container)
+        self.servo_list = [[servo0, 0x00], [servo1, 0x01]]
+
+        for servo_info in self.servo_list:
+            servo_index = servo_info[1]
+            servo: ServoPanel = servo_info[0]
+            servo.change_pos.connect(lambda value, servo_index = servo_index, servo = servo: self.servoSetPos(value, servo_index, servo))
+            servo.request_position.connect(lambda servo_index = servo_index, ser = servo: self.servoUpdateInfo(UART_OP_CODES.COM_SERVO_POS_READ, servo_index, ser))
+            servo.request_temp.connect(lambda servo_index = servo_index, ser = servo: self.servoUpdateInfo(UART_OP_CODES.COM_SERVO_READ_TEMP, servo_index, ser))
+            servo.request_status.connect(lambda servo_index = servo_index, ser = servo: self.servoUpdateInfo(UART_OP_CODES.COM_SERVO_PING, servo_index, ser))
+            servo_panel_container.addWidget(servo)
+
+        servo_panel.setLayout(servo_panel_container)
 
         #==================================
         # Main layout
         #==================================
         layout.addWidget(com_port_widget)
-        layout.addWidget(data_operations)
+        layout.addWidget(servo_panel)
         self.setLayout(layout)
 
     def changeCOMPort(self, index: int) -> None:
@@ -102,9 +110,58 @@ class ControlPanelGUI(QWidget):
             pb.setText("Disconnect")
             print("Connected")
 
-    def sendData(self, op_code: UART_OP_CODES, data: bytearray) -> None:
-        packet = self.port.transmit(op_code = op_code, data = data)
-        print(packet)
+    def sendData(self, op_code: UART_OP_CODES, data: bytearray) -> SerialDataPacket:
+        return self.port.transmit(op_code = op_code, data = data)
+
+    
+    def servoUpdateInfo(self, op_code: UART_OP_CODES, index: int, servo: ServoPanel) -> None:
+        packet: SerialDataPacket = self.sendData(op_code, bytearray([index]))
+
+        if packet is None:
+            return
         
+        data = packet.get_data(op_code)
+
+        if op_code == UART_OP_CODES.COM_SERVO_READ_TEMP:
+            servo.writeTemp(str(data[0]))
+        elif op_code == UART_OP_CODES.COM_SERVO_POS_READ:
+            val = float(data[0] * 360 / 4095)
+            servo.writePos(f'{val: .2f}')
+        elif op_code == UART_OP_CODES.COM_SERVO_PING:
+            servo.writeStatus(data[0])
+            
+
+        print("Received: {0}".format(bytes(packet.rx).hex()))
+
+    def servoSetPos(self, data: list, index: int, servo: ServoPanel) -> None:
+        pos_low_nibble = data[0] & 0xFF
+        pos_high_nibble = (data[0] & 0xFF00) >> 8
+
+        speed_low_nibble = data[1] & 0xFF
+        speed_high_nibble = (data[1] & 0xFF00) >> 8
+        
+        # Prepare data
+        print(index)
+        array = bytearray([index, pos_high_nibble, pos_low_nibble, speed_high_nibble, speed_low_nibble, data[2]])
+        print(array)
+        # Send data
+        datapacket = self.sendData(UART_OP_CODES.COM_SERVO_POS_SET, array)
+
+        if datapacket is None:
+            return
+        # Wait for servo to load data
+        time.sleep(0.2)
+        # Update current position
+        datapacket: SerialDataPacket = self.sendData(UART_OP_CODES.COM_SERVO_POS_READ, bytearray([index]))
+
+        if datapacket is None:
+            return
+        
+        print(datapacket.rx)
+        pos = datapacket.get_data(UART_OP_CODES.COM_SERVO_POS_READ)
+        print(pos[0])
+        servo.writePos(str(pos[0] * 360 / 4095))
+
+
 
         

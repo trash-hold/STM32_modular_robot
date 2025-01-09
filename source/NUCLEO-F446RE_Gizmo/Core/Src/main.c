@@ -131,10 +131,10 @@ int main(void)
 	acc1 = &Acc1;
 
 	servo Servo0_struct = { servo0_tx_buff, 0x00, servo0};
-
 	Servo_AddControler(0x00, &huart4);
 	ServoSetPos(0x00, 0x00, 3400, 50);
 	HAL_UART_Receive_DMA(&huart2, rx_buffer_DMA, 1);
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -271,7 +271,7 @@ void ServoRoutine(servo *servo)
 
 				if (pos > SERVO_MAX_ANGLE)
 					pos = SERVO_MAX_ANGLE;
-				else if (pos < SERVO_MAX_ANGLE && pos < 0)
+				else if (pos < -SERVO_MAX_ANGLE && pos < 0)
 					pos = -SERVO_MAX_ANGLE;
 
 				ReturnCode status = ServoSetPos(servo->servo_line, (uint16_t) pos, servo0_tx_buff[1], servo0_tx_buff[2]);

@@ -213,9 +213,18 @@ ReturnCode ServoPing(uint8_t servo_line, uint8_t id)
 	if (status != HAL_OK)
 		return G_ERROR;
 
-	status = HAL_UART_Receive(uart, buffer, 6, SERVO_TIMEOUT);
+	status = HAL_UART_Receive(uart, buffer, 1, SERVO_TIMEOUT);
 	if (status != HAL_OK)
 		return G_ERROR;
+
+	if(buffer[0] != 0xFF)
+		status = HAL_UART_Receive(uart, buffer, 6, SERVO_TIMEOUT);
+	else
+		status = HAL_UART_Receive(uart, buffer + 1, 5, SERVO_TIMEOUT);
+
+	if (status != HAL_OK)
+		return G_ERROR;
+
 	// First two bytes are buffer so they are skipped
 
 	if ( buffer[2] != id )
