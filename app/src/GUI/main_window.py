@@ -125,7 +125,7 @@ class ControlPanelGUI(QWidget):
         if op_code == UART_OP_CODES.COM_SERVO_READ_TEMP:
             servo.writeTemp(str(data[0]))
         elif op_code == UART_OP_CODES.COM_SERVO_POS_READ:
-            val = float(data[0] * 360 / 4095)
+            val = data[0] * 360 / 4095
             servo.writePos(f'{val: .2f}')
         elif op_code == UART_OP_CODES.COM_SERVO_PING:
             servo.writeStatus(data[0])
@@ -159,9 +159,5 @@ class ControlPanelGUI(QWidget):
         
         print(datapacket.rx)
         pos = datapacket.get_data(UART_OP_CODES.COM_SERVO_POS_READ)
-        print(pos[0])
-        servo.writePos(str(pos[0] * 360 / 4095))
-
-
-
-        
+        val = pos[0] * 360 / 4095
+        servo.writePos(f'{val: .2f}')

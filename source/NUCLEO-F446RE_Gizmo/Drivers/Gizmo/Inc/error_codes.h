@@ -19,6 +19,11 @@ typedef enum ReturnCode{
 	G_COM_TRANSMIT = 0x06,
 	G_COM_RECEIVE = 0x07,
 	C_RTC_ERROR = 0x08,
+	C_UART_TRANSMIT = 0x09,
+	C_UART_RECEIVE = 0x0A,
+	C_UART_HANDLE = 0x0B,
+	G_SERVO_WRTIE = 0x0C,
+	G_SERVO_READ = 0x0D,
 }ReturnCode;
 
 

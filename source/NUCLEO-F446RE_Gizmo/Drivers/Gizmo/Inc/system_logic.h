@@ -49,6 +49,8 @@ typedef enum UART_OP_STATUS{
 typedef struct servo_struct{
 	uint16_t *tx_buffer;
 	uint8_t servo_line;
+	int16_t last_write_pos;
+	int16_t last_read_pos;
 	peripheral_state *state;
 }servo;
 

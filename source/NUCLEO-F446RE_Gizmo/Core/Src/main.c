@@ -37,6 +37,7 @@
 #include "trig.h"
 #include "ST3020_servo.h"
 #include "system_logic.h"
+#include <stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,6 +65,7 @@
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void ServoRoutine(servo* servo);
+ReturnCode Screen_ServoUpdate(servo* servo);
 ReturnCode COM_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes);
 /* USER CODE END PFP */
 
@@ -78,11 +80,15 @@ uint8_t header_received = 0x00;
 uint8_t header_sent = 0x00;
 
 //Peripherals
+servo Servo0_struct;
 peripheral_state Servo0, Servo1, Acc0, Acc1;
 peripheral_state *servo0, *servo1, *acc0, *acc1;
 
 uint16_t servo0_tx_buff[3];
 uint16_t servo1_tx_buff[3];
+
+// SD
+char msg_buffer[32];
 /* USER CODE END 0 */
 
 /**
@@ -124,13 +130,19 @@ int main(void)
   MX_UART4_Init();
   MX_CAN1_Init();
   /* USER CODE BEGIN 2 */
+  	InitLogging(&hrtc);
+  	Screen_Init();
+  	Screen_DrawInfoScreen();
 
 	servo0 = &Servo0;
 	servo1 = &Servo1;
 	acc0 = &Acc0;
 	acc1 = &Acc1;
 
-	servo Servo0_struct = { servo0_tx_buff, 0x00, servo0};
+	Servo0_struct.tx_buffer = servo0_tx_buff;
+	Servo0_struct.servo_line = 0x00;
+	Servo0_struct.state = servo0;
+
 	Servo_AddControler(0x00, &huart4);
 	ServoSetPos(0x00, 0x00, 3400, 50);
 	HAL_UART_Receive_DMA(&huart2, rx_buffer_DMA, 1);
@@ -243,6 +255,15 @@ ReturnCode COM_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes)
 	return G_SUCCESS;
 }
 
+ReturnCode Screen_ServoUpdate(servo* servo)
+{
+	float last_write = (servo->last_write_pos) * 360 / 4095;
+	float last_read = (servo->last_read_pos) * 360 / 4095;
+	float data[] = {last_write, last_read};
+
+	return Screen_UpdateData( ((servo->servo_line == 0x00) ? SERVO_0: SERVO_1), data, 2);
+}
+
 void ServoRoutine(servo *servo)
 {
 	peripheral_state *per_state = servo->state;
@@ -256,12 +277,14 @@ void ServoRoutine(servo *servo)
 			// Log error
 			per_state->state = PER_IDLE;
 			per_state->cmd = COM_IDLE;
+			SD_LogStatus(per_state->last_code);
 			return;
 
 		case PER_DONE:
 			// Log success
 			per_state->state = PER_IDLE;
 			per_state->cmd = COM_IDLE;
+
 			return;
 
 		case PER_WAITING:
@@ -278,6 +301,15 @@ void ServoRoutine(servo *servo)
 				PeripheralUpdateState(servo->state, status);
 
 				status = COM_TransmitResponse(status, NULL, 0);
+
+				// Update value
+				servo->last_write_pos = pos;
+
+				// Log
+				snprintf(msg_buffer, sizeof(msg_buffer), "S%02d write: %d\n", (uint8_t) servo->servo_line, pos);
+				status =SD_LogMsg(msg_buffer);
+
+				status = Screen_ServoUpdate(servo);
 				return;
 			}
 			else if( per_state->cmd == COM_SERVO_POS_READ)
@@ -299,6 +331,14 @@ void ServoRoutine(servo *servo)
 					status = COM_TransmitResponse(status, NULL, 0);
 				}
 
+				// Update
+				servo->last_read_pos = pos;
+
+				// Log
+				snprintf(msg_buffer, sizeof(msg_buffer), "S%02d read: %d\n", (uint8_t) servo->servo_line, pos);
+				status = SD_LogMsg(msg_buffer);
+
+				status = Screen_ServoUpdate(servo);
 				return;
 			}
 			else if ( per_state->cmd == COM_SERVO_PING )
@@ -307,6 +347,11 @@ void ServoRoutine(servo *servo)
 				PeripheralUpdateState(servo->state, status);
 				status = COM_TransmitResponse(status, NULL, 0);
 
+				// Log
+				snprintf(msg_buffer, sizeof(msg_buffer), "S%02d status: %d\n", (uint8_t) servo->servo_line, status);
+				SD_LogMsg(msg_buffer);
+
+				status = Screen_UpdateStatus(((servo->servo_line == 0x00) ? SERVO_0: SERVO_1), per_state->last_code);
 				return;
 			}
 			else if ( per_state->cmd == COM_SERVO_READ_TEMP )
@@ -316,6 +361,10 @@ void ServoRoutine(servo *servo)
 
 				PeripheralUpdateState(servo->state, status);
 				status = COM_TransmitResponse(status, &temp, 1);
+
+				// Log
+				snprintf(msg_buffer, sizeof(msg_buffer), "S%02d temp: %d\n", (uint8_t) servo->servo_line, temp);
+				status = SD_LogMsg(msg_buffer);
 
 				return;
 			}
