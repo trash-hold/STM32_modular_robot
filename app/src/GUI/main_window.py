@@ -62,9 +62,9 @@ class ControlPanelGUI(QWidget):
         servo0 = ServoPanel("Servo 0")
         servo1 = ServoPanel("Servo 1")
 
-        self.servo_list = [[servo0, 0x00], [servo1, 0x01]]
+        servo_list = [[servo0, 0x00], [servo1, 0x01]]
 
-        for servo_info in self.servo_list:
+        for servo_info in servo_list:
             servo_index = servo_info[1]
             servo: ServoPanel = servo_info[0]
             servo.change_pos.connect(lambda value, servo_index = servo_index, servo = servo: self.servoSetPos(value, servo_index, servo))
@@ -83,11 +83,14 @@ class ControlPanelGUI(QWidget):
 
         acc0 = AccelerometerPanel("Accelerometer  0")
         acc1 = AccelerometerPanel("Accelerometer  1")
+        acc_list = [[acc0, 0x00], [acc1, 0x01]]
+        for acc_info in acc_list:
+            acc = acc_info[0]
+            index = acc_info[1]
         
-        acc0.request_angles.connect(lambda: self.accUpdateInfo(UART_OP_CODES.COM_ACC_ANGLES_READ, 0x00, acc0))
-
-        acc_panel_container.addWidget(acc0)
-        acc_panel_container.addWidget(acc1)
+            acc.request_angles.connect(lambda index = index, acc = acc: self.accUpdateInfo(UART_OP_CODES.COM_ACC_ANGLES_READ, index, acc))
+            acc.request_status.connect(lambda index = index, acc = acc: self.accUpdateInfo(UART_OP_CODES.COM_ACC_STATUS, index, acc))
+            acc_panel_container.addWidget(acc)
 
         #==================================
         # Main layout
@@ -162,7 +165,10 @@ class ControlPanelGUI(QWidget):
             return
         
         data = packet.get_data(op_code)
-        print(data)
+        if op_code == UART_OP_CODES.COM_ACC_ANGLES_READ:
+            acc_panel.writeAngles(data)
+        elif op_code == UART_OP_CODES.COM_ACC_STATUS:
+            acc_panel.writeStatus(data[0])
 
     def servoSetPos(self, data: list, index: int, servo: ServoPanel) -> None:
         pos_low_nibble = data[0] & 0xFF

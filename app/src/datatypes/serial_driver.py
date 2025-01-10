@@ -52,7 +52,7 @@ class SerialDataPacket():
             pos = self.rx[3]
             return [pos]
         
-        elif op_code == UART_OP_CODES.COM_SERVO_PING:
+        elif op_code == UART_OP_CODES.COM_SERVO_PING or op_code == UART_OP_CODES.COM_ACC_STATUS:
             if len(self.rx) != 4:
                 return None
             

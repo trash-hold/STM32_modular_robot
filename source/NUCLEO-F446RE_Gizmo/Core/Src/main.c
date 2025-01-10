@@ -472,10 +472,14 @@ void AccelometerRoutine(accelometer* acc)
 				}
 				else if ( per_state->cmd == COM_ACC_STATUS)
 				{
-					status = COM_TransmitResponse(per_state->last_code, NULL, 0);
+					ReturnCode status = COM_TransmitResponse(per_state->last_code, NULL, 0);
 					PeripheralUpdateState(per_state, G_SUCCESS);
 
+					// Log
+					status = SD_LogStatus(per_state->last_code);
 
+					status = Screen_UpdateStatus((acc->acc_line == 0x00 ? ACC_0 : ACC_1) , per_state->last_code);
+					return;
 				}
 
 			default:

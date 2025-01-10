@@ -367,7 +367,7 @@ class AccelerometerPanel(QWidget):
 
     def writeAngles(self, ang: list) -> None:
         for index in range(0,3):
-            self.inputs[index].setText(ang[index])
+            self.info_widgets[index].setText(ang[index])
 
     def writeStatus(self, value) -> None:
-        self.updateInfo(value, self.inputs)
+        self.info_widgets[3].setText(value)

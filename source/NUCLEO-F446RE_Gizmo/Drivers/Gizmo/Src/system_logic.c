@@ -83,12 +83,12 @@ UART_OP_STATUS UART_Decode(uint8_t* msg_buffer)
 			// Servo line id
 			if( servo_line == 0x00)
 			{
-				if ( PeripheralAddCMD(servo0, COM_SERVO_READ_TEMP) != UART_OK )
+				if ( PeripheralAddCMD(servo0, *(msg_buffer + CMD_POS_BYTE)) != UART_OK )
 					return UART_ERROR;
 			}
 			else if ( servo_line == 0x01 )
 			{
-				if ( PeripheralAddCMD(servo1, COM_SERVO_READ_TEMP) != UART_OK )
+				if ( PeripheralAddCMD(servo1, *(msg_buffer + CMD_POS_BYTE)) != UART_OK )
 					return UART_ERROR;
 			}
 
@@ -106,12 +106,12 @@ UART_OP_STATUS UART_Decode(uint8_t* msg_buffer)
 			uint8_t acc_line = *(msg_buffer + PER_LINE_BYTE);
 			if( acc_line == 0x00)
 			{
-				if ( PeripheralAddCMD(acc0, COM_ACC_ANGLES_READ) != UART_OK )
+				if ( PeripheralAddCMD(acc0, *(msg_buffer + CMD_POS_BYTE)) != UART_OK )
 					return UART_ERROR;
 			}
 			else if ( acc_line == 0x01 )
 			{
-				if ( PeripheralAddCMD(acc1, COM_ACC_ANGLES_READ) != UART_OK )
+				if ( PeripheralAddCMD(acc1, *(msg_buffer + CMD_POS_BYTE)) != UART_OK )
 					return UART_ERROR;
 			}
 
