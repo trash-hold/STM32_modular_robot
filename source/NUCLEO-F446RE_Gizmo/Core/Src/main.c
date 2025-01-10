@@ -66,6 +66,10 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void ServoRoutine(servo* servo);
 ReturnCode Screen_ServoUpdate(servo* servo);
+
+void AccelometerRoutine(accelometer* acc);
+void AccelometerPrepareTransmitData(accelometer* acc, uint8_t* data);
+
 ReturnCode COM_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes);
 /* USER CODE END PFP */
 
@@ -81,11 +85,16 @@ uint8_t header_sent = 0x00;
 
 //Peripherals
 servo Servo0_struct;
+accelometer Acc0_struct;
 peripheral_state Servo0, Servo1, Acc0, Acc1;
 peripheral_state *servo0, *servo1, *acc0, *acc1;
 
+float acc0_angles[3];
+float acc1_angles[3];
 uint16_t servo0_tx_buff[3];
 uint16_t servo1_tx_buff[3];
+int16_t acc0_measurment[3];
+int16_t acc1_measurment[3];
 
 // SD
 char msg_buffer[32];
@@ -133,7 +142,6 @@ int main(void)
   	InitLogging(&hrtc);
   	Screen_Init();
   	Screen_DrawInitScreen();
-  	Screen_DrawInfoScreen();
 
 	servo0 = &Servo0;
 	servo1 = &Servo1;
@@ -144,8 +152,19 @@ int main(void)
 	Servo0_struct.servo_line = 0x00;
 	Servo0_struct.state = servo0;
 
+	Acc0_struct.angles = acc0_angles;
+	Acc0_struct.raw_measurement = acc0_measurment;
+	Acc0_struct.acc_line = 0x00;
+	Acc0_struct.state = acc0;
+
 	Servo_AddControler(0x00, &huart4);
 	ServoSetPos(0x00, 0x00, 3400, 50);
+
+	ReturnCode status = Acc_AddController(&hi2c1, 0x00);
+	status = Acc_SelfTest(acc0_measurment, 0x00);
+
+	Screen_DrawInfoScreen();
+
 	HAL_UART_Receive_DMA(&huart2, rx_buffer_DMA, 1);
 
   /* USER CODE END 2 */
@@ -156,6 +175,7 @@ int main(void)
   {
 
 	  ServoRoutine(&Servo0_struct);
+	  AccelometerRoutine(&Acc0_struct);
 
 
     /* USER CODE END WHILE */
@@ -374,6 +394,94 @@ void ServoRoutine(servo *servo)
 			return;
 	}
 	return;
+}
+
+void AccelometerPrepareTransmitData(accelometer* acc, uint8_t* data)
+{
+	for( uint8_t i = 0; i<3; i++)
+	{
+		float angle = *(acc->angles + i);
+		float temp;
+		if(angle < 0)
+		{
+			angle = -angle;
+			*(data + 2*i + 1) = ((uint8_t) angle) | (0x01 << 7);
+		}
+		else
+		{
+			*(data + 2*i + 1) = ((uint8_t) angle);
+		}
+
+		temp = angle * 100 - ((int) angle) * 100;
+		*(data + 2*i) = (uint8_t) temp;
+	}
+}
+
+void AccelometerRoutine(accelometer* acc)
+{
+	peripheral_state *per_state = acc->state;
+
+		switch( per_state->state )
+		{
+			case PER_IDLE:
+				return;
+
+			case PER_ERROR:
+				// Log error
+				per_state->state = PER_IDLE;
+				per_state->cmd = COM_IDLE;
+				SD_LogStatus(per_state->last_code);
+				return;
+
+			case PER_DONE:
+				// Log success
+				per_state->state = PER_IDLE;
+				per_state->cmd = COM_IDLE;
+
+				return;
+
+			case PER_WAITING:
+				if( per_state->cmd == COM_ACC_ANGLES_READ )
+				{
+
+					ReturnCode status = Acc_AvgMeasurment(acc->raw_measurement, 32, acc->acc_line);
+					if(status != G_SUCCESS)
+					{
+						PeripheralUpdateState(per_state, status);
+						status = COM_TransmitResponse(status, NULL, 0);
+
+						return;
+
+					}
+
+					// Calculate angles
+					GetTiltAngles(acc->angles, acc->raw_measurement);
+
+					uint8_t data[6];
+					AccelometerPrepareTransmitData(acc, data);
+					PeripheralUpdateState(per_state, status);
+
+					status = COM_TransmitResponse(status, data, 6);
+
+					// Log
+					snprintf(msg_buffer, sizeof(msg_buffer), "A%02d: %2.2f %2.2f %2.2f\n", acc->acc_line, *(acc->angles), *(acc->angles + 1), *(acc->angles + 2));
+					status = SD_LogMsg(msg_buffer);
+
+					status = Screen_UpdateData((acc->acc_line == 0x00 ? ACC_0 : ACC_1) , acc->angles, 3);
+					return;
+				}
+				else if ( per_state->cmd == COM_ACC_STATUS)
+				{
+					status = COM_TransmitResponse(per_state->last_code, NULL, 0);
+					PeripheralUpdateState(per_state, G_SUCCESS);
+
+
+				}
+
+			default:
+				return;
+		}
+		return;
 }
 
 

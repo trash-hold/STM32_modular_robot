@@ -83,6 +83,8 @@ class ControlPanelGUI(QWidget):
 
         acc0 = AccelerometerPanel("Accelerometer  0")
         acc1 = AccelerometerPanel("Accelerometer  1")
+        
+        acc0.request_angles.connect(lambda: self.accUpdateInfo(UART_OP_CODES.COM_ACC_ANGLES_READ, 0x00, acc0))
 
         acc_panel_container.addWidget(acc0)
         acc_panel_container.addWidget(acc1)
@@ -152,6 +154,15 @@ class ControlPanelGUI(QWidget):
             
 
         print("Received: {0}".format(bytes(packet.rx).hex()))
+
+    def accUpdateInfo(self, op_code: UART_OP_CODES, index:int, acc_panel: AccelerometerPanel) -> None:
+        packet: SerialDataPacket = self.sendData(op_code, bytearray([index]))
+
+        if packet is None:
+            return
+        
+        data = packet.get_data(op_code)
+        print(data)
 
     def servoSetPos(self, data: list, index: int, servo: ServoPanel) -> None:
         pos_low_nibble = data[0] & 0xFF

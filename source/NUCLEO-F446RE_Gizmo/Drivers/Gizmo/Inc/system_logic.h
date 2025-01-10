@@ -8,7 +8,7 @@
 
 #define ID_POS_BYTE 1
 #define CMD_POS_BYTE 2
-#define SERVO_LINE_BYTE 3
+#define PER_LINE_BYTE 3
 
 #define SERVO_MAX_ANGLE 568
 
@@ -23,6 +23,7 @@ typedef enum COM_COMMANDS{
 	COM_SERVO_READ_TEMP = 0x03,
 	COM_SERVO_PING = 0x04,
 	COM_ACC_ANGLES_READ = 0x05,
+	COM_ACC_STATUS = 0x06
 }UART_COMMANDS;
 
 typedef enum PERIPHERAL_STATE{
@@ -56,9 +57,8 @@ typedef struct servo_struct{
 
 typedef struct acc_struct{
 	float *angles;
-	uint8_t id;
-	uint8_t cs_pin;
-	uint8_t cs_port;
+	int16_t *raw_measurement;
+	uint8_t acc_line;
 	peripheral_state *state;
 }accelometer;
 

@@ -313,6 +313,8 @@ ReturnCode Screen_UpdateData(PERIPHERAL per, float* data, uint8_t length)
 		default:
 			return G_ERROR;
 	}
+	// Clear space
+	LCD_DrawRectangle(x-5, y, x + 25, y + 9 * length, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
 
 	// Display value
 	char buff[7];

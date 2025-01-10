@@ -24,6 +24,10 @@ typedef enum ReturnCode{
 	C_UART_HANDLE = 0x0B,
 	G_SERVO_WRTIE = 0x0C,
 	G_SERVO_READ = 0x0D,
+	C_ACC_HANDLE = 0x0E,
+	C_I2C_TRANSMIT = 0x0F,
+	C_I2C_RECEIVE = 0x10,
+	G_ACC_READ = 0x11
 }ReturnCode;
 
 

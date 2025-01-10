@@ -58,6 +58,23 @@ class SerialDataPacket():
             
             pos = UART_STATUS_CODES(self.rx[2]).name
             return [pos]
+        
+        elif op_code == UART_OP_CODES.COM_ACC_ANGLES_READ:
+            if len(self.rx) != 10:
+                return None
+            
+            angles = []
+            for i in range(0,3):
+                lower_byte = self.rx[3 + i*2]
+                higher_byte = self.rx[4 + i*2]
+
+                sign = -1 if (higher_byte & 0x80) == 1 else 1
+                val = float(higher_byte & 0x7F) + float(lower_byte / 100)
+                val = val * sign
+                angles.append(f'{val: .2f}')
+
+            return angles
+
 
 
 class SerialDriver(serial.Serial):
