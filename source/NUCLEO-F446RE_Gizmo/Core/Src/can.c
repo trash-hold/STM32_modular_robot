@@ -21,7 +21,7 @@
 #include "can.h"
 
 /* USER CODE BEGIN 0 */
-
+CAN_FilterTypeDef filter;
 /* USER CODE END 0 */
 
 CAN_HandleTypeDef hcan1;
@@ -38,10 +38,10 @@ void MX_CAN1_Init(void)
 
   /* USER CODE END CAN1_Init 1 */
   hcan1.Instance = CAN1;
-  hcan1.Init.Prescaler = 10;
+  hcan1.Init.Prescaler = 5;
   hcan1.Init.Mode = CAN_MODE_NORMAL;
-  hcan1.Init.SyncJumpWidth = CAN_SJW_2TQ;
-  hcan1.Init.TimeSeg1 = CAN_BS1_3TQ;
+  hcan1.Init.SyncJumpWidth = CAN_SJW_1TQ;
+  hcan1.Init.TimeSeg1 = CAN_BS1_8TQ;
   hcan1.Init.TimeSeg2 = CAN_BS2_1TQ;
   hcan1.Init.TimeTriggeredMode = DISABLE;
   hcan1.Init.AutoBusOff = DISABLE;
@@ -54,7 +54,33 @@ void MX_CAN1_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN CAN1_Init 2 */
+  // Define filter
 
+	filter.FilterActivation = CAN_FILTER_ENABLE;
+	filter.FilterBank = 0x00;
+	filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+	filter.FilterScale = CAN_FILTERSCALE_32BIT;
+	filter.FilterMode = CAN_FILTERMODE_IDMASK;
+	filter.FilterMaskIdHigh = 0x00;
+	filter.FilterMaskIdLow = 0x00;
+	//can0_filter.FilterIdHigh = 0x00;
+	//can0_filter.FilterIdLow = module_id;
+
+	// Add filter
+	if ( HAL_CAN_ConfigFilter(&hcan1, &filter) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+	// Start CAN
+	if (HAL_CAN_Start(&hcan1) != HAL_OK)
+	{
+		Error_Handler();
+	}
+	if( HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+	{
+		Error_Handler();
+	}
   /* USER CODE END CAN1_Init 2 */
 
 }
@@ -91,6 +117,9 @@ void HAL_CAN_MspInit(CAN_HandleTypeDef* canHandle)
     GPIO_InitStruct.Alternate = GPIO_AF9_CAN1;
     HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
+    /* CAN1 interrupt Init */
+    HAL_NVIC_SetPriority(CAN1_RX0_IRQn, 0, 0);
+    HAL_NVIC_EnableIRQ(CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspInit 1 */
 
   /* USER CODE END CAN1_MspInit 1 */
@@ -116,6 +145,8 @@ void HAL_CAN_MspDeInit(CAN_HandleTypeDef* canHandle)
 
     HAL_GPIO_DeInit(GPIOB, GPIO_PIN_8);
 
+    /* CAN1 interrupt Deinit */
+    HAL_NVIC_DisableIRQ(CAN1_RX0_IRQn);
   /* USER CODE BEGIN CAN1_MspDeInit 1 */
 
   /* USER CODE END CAN1_MspDeInit 1 */

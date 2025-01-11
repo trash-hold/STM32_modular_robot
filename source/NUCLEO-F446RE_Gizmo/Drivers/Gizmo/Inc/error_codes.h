@@ -27,7 +27,12 @@ typedef enum ReturnCode{
 	C_ACC_HANDLE = 0x0E,
 	C_I2C_TRANSMIT = 0x0F,
 	C_I2C_RECEIVE = 0x10,
-	G_ACC_READ = 0x11
+	G_ACC_READ = 0x11,
+	C_CAN_TXADD = 0x12,
+	C_CAN_OVERFLOW = 0x13,
+	C_CAN_CONFIG = 0x14,
+	C_CAN_READ = 0x15,
+	C_COM_DECODE = 0x16
 }ReturnCode;
 
 

@@ -64,18 +64,30 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
+
+// Servo Functions
 void ServoRoutine(servo* servo);
 ReturnCode Screen_ServoUpdate(servo* servo);
 
+// Acc Functions
 void AccelometerRoutine(accelometer* acc);
 void AccelometerPrepareTransmitData(accelometer* acc, uint8_t* data);
 
+// CAN functions
+ReturnCode CAN_Config();
+void CAN_ConfigMsg(CAN_TxHeaderTypeDef *header, can* can);
+void CANRoutine(can* can);
+
+// COM functions
 ReturnCode COM_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes);
+ReturnCode CAN_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes, COM_COMMAND cmd);
+ReturnCode TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes, COM_COMMAND cmd);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t module_id = 0x01;
+uint8_t module_role = MODULE_TARGET;
 
 // Uart DMA
 uint8_t tx_buffer_DMA[DMA_TX_SIZE];
@@ -86,8 +98,16 @@ uint8_t header_sent = 0x00;
 //Peripherals
 servo Servo0_struct;
 accelometer Acc0_struct;
-peripheral_state Servo0, Servo1, Acc0, Acc1;
-peripheral_state *servo0, *servo1, *acc0, *acc1;
+
+can Can_struct;
+can* can0_struct;
+CAN_TxHeaderTypeDef tx_header;
+CAN_RxHeaderTypeDef rx_header;
+uint32_t tx_mail;
+CAN_FilterTypeDef can0_filter;
+
+peripheral_state Servo0, Servo1, Acc0, Acc1, Can0;
+peripheral_state *servo0, *servo1, *acc0, *acc1, *can0;
 
 float acc0_angles[3];
 float acc1_angles[3];
@@ -95,6 +115,8 @@ uint16_t servo0_tx_buff[3];
 uint16_t servo1_tx_buff[3];
 int16_t acc0_measurment[3];
 int16_t acc1_measurment[3];
+uint8_t can_tx_buffer[8];
+uint8_t can_rx_buffer[8];
 
 // SD
 char msg_buffer[32];
@@ -157,6 +179,10 @@ int main(void)
 	Acc0_struct.acc_line = 0x00;
 	Acc0_struct.state = acc0;
 
+	CAN_Config();
+
+
+
 	Servo_AddControler(0x00, &huart4);
 	ServoSetPos(0x00, 0x00, 3400, 50);
 
@@ -173,7 +199,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	  if(module_role == MODULE_CONTROLLER)
+		  CANRoutine(can0_struct);
 	  ServoRoutine(&Servo0_struct);
 	  AccelometerRoutine(&Acc0_struct);
 
@@ -235,9 +262,22 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
+ReturnCode TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes, COM_COMMAND cmd)
+{
+	if (module_role == MODULE_CONTROLLER)
+		return COM_TransmitResponse(status, data, bytes);
+	else
+	{
+		return CAN_TransmitResponse(status, data, bytes, cmd);
+	}
+}
+
 
 ReturnCode COM_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes)
 {
+	if (module_role == MODULE_TARGET)
+		return G_SUCCESS;
+
 	uint8_t checksum = 0;
 	uint8_t transmit_size = 4;
 
@@ -295,20 +335,25 @@ void ServoRoutine(servo *servo)
 			return;
 
 		case PER_ERROR:
+		{
 			// Log error
 			per_state->state = PER_IDLE;
 			per_state->cmd = COM_IDLE;
 			SD_LogStatus(per_state->last_code);
 			return;
+		}
 
 		case PER_DONE:
+		{
 			// Log success
 			per_state->state = PER_IDLE;
 			per_state->cmd = COM_IDLE;
 
 			return;
+		}
 
-		case PER_WAITING:
+		case PER_WORKING:
+		{
 			if( per_state->cmd == COM_SERVO_POS_SET )
 			{
 				int16_t pos = *(servo->tx_buffer);
@@ -321,7 +366,7 @@ void ServoRoutine(servo *servo)
 				ReturnCode status = ServoSetPos(servo->servo_line, (uint16_t) pos, servo0_tx_buff[1], servo0_tx_buff[2]);
 				PeripheralUpdateState(servo->state, status);
 
-				status = COM_TransmitResponse(status, NULL, 0);
+				status = TransmitResponse(status, NULL, 0, COM_SERVO_POS_SET);
 
 				// Update value
 				servo->last_write_pos = pos;
@@ -345,11 +390,11 @@ void ServoRoutine(servo *servo)
 					uint8_t buff[] = { (( pos & 0xFF00) >> 8), (pos & 0x0FF)};
 
 					// Send response
-					status = COM_TransmitResponse(status, buff, 2);
+					status = TransmitResponse(status, buff, 2, COM_SERVO_POS_READ);
 				}
 				else
 				{
-					status = COM_TransmitResponse(status, NULL, 0);
+					status = TransmitResponse(status, NULL, 0, COM_SERVO_POS_READ);
 				}
 
 				// Update
@@ -366,7 +411,7 @@ void ServoRoutine(servo *servo)
 			{
 				ReturnCode status = ServoPing(servo->servo_line, 0x01);
 				PeripheralUpdateState(servo->state, status);
-				status = COM_TransmitResponse(status, NULL, 0);
+				status = TransmitResponse(status, NULL, 0, COM_SERVO_PING);
 
 				// Log
 				snprintf(msg_buffer, sizeof(msg_buffer), "S%02d status: %d\n", (uint8_t) servo->servo_line, status);
@@ -381,7 +426,7 @@ void ServoRoutine(servo *servo)
 				ReturnCode status = ServoTemp(servo->servo_line, &temp);
 
 				PeripheralUpdateState(servo->state, status);
-				status = COM_TransmitResponse(status, &temp, 1);
+				status = TransmitResponse(status, &temp, 1, COM_SERVO_READ_TEMP);
 
 				// Log
 				snprintf(msg_buffer, sizeof(msg_buffer), "S%02d temp: %d\n", (uint8_t) servo->servo_line, temp);
@@ -389,7 +434,7 @@ void ServoRoutine(servo *servo)
 
 				return;
 			}
-
+		}
 		default:
 			return;
 	}
@@ -421,73 +466,244 @@ void AccelometerRoutine(accelometer* acc)
 {
 	peripheral_state *per_state = acc->state;
 
-		switch( per_state->state )
+	switch( per_state->state )
+	{
+		case PER_IDLE:
+			return;
+
+		case PER_ERROR:
 		{
-			case PER_IDLE:
-				return;
-
-			case PER_ERROR:
-				// Log error
-				per_state->state = PER_IDLE;
-				per_state->cmd = COM_IDLE;
-				SD_LogStatus(per_state->last_code);
-				return;
-
-			case PER_DONE:
-				// Log success
-				per_state->state = PER_IDLE;
-				per_state->cmd = COM_IDLE;
-
-				return;
-
-			case PER_WAITING:
-				if( per_state->cmd == COM_ACC_ANGLES_READ )
-				{
-
-					ReturnCode status = Acc_AvgMeasurment(acc->raw_measurement, 32, acc->acc_line);
-					if(status != G_SUCCESS)
-					{
-						PeripheralUpdateState(per_state, status);
-						status = COM_TransmitResponse(status, NULL, 0);
-
-						return;
-
-					}
-
-					// Calculate angles
-					GetTiltAngles(acc->angles, acc->raw_measurement);
-
-					uint8_t data[6];
-					AccelometerPrepareTransmitData(acc, data);
-					PeripheralUpdateState(per_state, status);
-
-					status = COM_TransmitResponse(status, data, 6);
-
-					// Log
-					snprintf(msg_buffer, sizeof(msg_buffer), "A%02d: %2.2f %2.2f %2.2f\n", acc->acc_line, *(acc->angles), *(acc->angles + 1), *(acc->angles + 2));
-					status = SD_LogMsg(msg_buffer);
-
-					status = Screen_UpdateData((acc->acc_line == 0x00 ? ACC_0 : ACC_1) , acc->angles, 3);
-					return;
-				}
-				else if ( per_state->cmd == COM_ACC_STATUS)
-				{
-					ReturnCode status = COM_TransmitResponse(per_state->last_code, NULL, 0);
-					PeripheralUpdateState(per_state, G_SUCCESS);
-
-					// Log
-					status = SD_LogStatus(per_state->last_code);
-
-					status = Screen_UpdateStatus((acc->acc_line == 0x00 ? ACC_0 : ACC_1) , per_state->last_code);
-					return;
-				}
-
-			default:
-				return;
+			// Log error
+			per_state->state = PER_IDLE;
+			per_state->cmd = COM_IDLE;
+			SD_LogStatus(per_state->last_code);
+			return;
 		}
-		return;
+
+		case PER_DONE:
+		{
+			// Log success
+			per_state->state = PER_IDLE;
+			per_state->cmd = COM_IDLE;
+
+			return;
+		}
+
+		case PER_WORKING:
+		{
+			if( per_state->cmd == COM_ACC_ANGLES_READ )
+			{
+
+				ReturnCode status = Acc_AvgMeasurment(acc->raw_measurement, 32, acc->acc_line);
+				if(status != G_SUCCESS)
+				{
+					PeripheralUpdateState(per_state, status);
+					status = TransmitResponse(status, NULL, 0, COM_ACC_ANGLES_READ);
+
+					return;
+
+				}
+
+				// Calculate angles
+				GetTiltAngles(acc->angles, acc->raw_measurement);
+
+				uint8_t data[6];
+				AccelometerPrepareTransmitData(acc, data);
+				PeripheralUpdateState(per_state, status);
+
+				status = TransmitResponse(status, data, 6, COM_ACC_ANGLES_READ);
+
+				// Log
+				snprintf(msg_buffer, sizeof(msg_buffer), "A%02d: %2.2f %2.2f %2.2f\n", acc->acc_line, *(acc->angles), *(acc->angles + 1), *(acc->angles + 2));
+				status = SD_LogMsg(msg_buffer);
+
+				status = Screen_UpdateData((acc->acc_line == 0x00 ? ACC_0 : ACC_1) , acc->angles, 3);
+				return;
+			}
+			else if ( per_state->cmd == COM_ACC_STATUS)
+			{
+				ReturnCode status ;
+
+				status = TransmitResponse(status, NULL, 0, COM_ACC_STATUS);
+				PeripheralUpdateState(per_state, G_SUCCESS);
+
+				// Log
+				status = SD_LogStatus(per_state->last_code);
+
+				status = Screen_UpdateStatus((acc->acc_line == 0x00 ? ACC_0 : ACC_1) , per_state->last_code);
+				return;
+			}
+		}
+
+		default:
+			return;
+	}
+	return;
 }
 
+ReturnCode CAN_Config()
+{
+	// Init
+	can0 = &Can0;
+	Can_struct.state = can0;
+	Can_struct.tx_buffer = can_tx_buffer;
+	Can_struct.rx_buffer = can_rx_buffer;
+
+	can0_struct = &Can_struct;
+
+
+	// Define filter
+	can0_filter.FilterActivation = CAN_FILTER_ENABLE;
+	can0_filter.FilterBank = 0x00;
+	can0_filter.FilterFIFOAssignment = CAN_FILTER_FIFO0;
+	can0_filter.FilterScale = CAN_FILTERSCALE_32BIT;
+	can0_filter.FilterMode = CAN_FILTERMODE_IDMASK;
+	can0_filter.FilterMaskIdHigh = 0x00;
+	can0_filter.FilterMaskIdLow = 0x00;
+	//can0_filter.FilterIdHigh = 0x00;
+	//can0_filter.FilterIdLow = module_id;
+
+	/*
+	// Add filter
+	if ( HAL_CAN_ConfigFilter(&hcan1, &can0_filter) != HAL_OK)
+		return C_CAN_CONFIG;
+
+	// Start CAN
+	if (HAL_CAN_Start(&hcan1) != HAL_OK)
+		return C_CAN_CONFIG;
+
+
+	// Add interrupt on msg received
+	if( HAL_CAN_ActivateNotification(&hcan1, CAN_IT_RX_FIFO0_MSG_PENDING) != HAL_OK)
+		return C_CAN_CONFIG;
+	*/
+	return G_SUCCESS;
+}
+
+
+
+void CAN_ConfigMsg(CAN_TxHeaderTypeDef *header, can* can)
+{
+	// Get proper identifier
+	header->StdId =  ((can->weight) << 8) | (can->receiver_id);
+
+	// Get data length
+	switch(can->state->cmd)
+	{
+		case COM_SERVO_POS_SET:
+			header->DLC = 7;
+			break;
+		default:
+			header->DLC = 2;
+	}
+
+	header->RTR = CAN_RTR_DATA;
+}
+
+ReturnCode CAN_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes, COM_COMMAND cmd)
+{
+	if (bytes > 7)
+		return C_CAN_OVERFLOW;
+
+	can0_struct->weight = CAN_WRITE;
+	*(can0_struct->tx_buffer) = cmd;
+	CAN_ConfigMsg(&tx_header, can0_struct);
+
+	for(uint8_t i = 1; i < bytes; i++)
+	{
+		*(can0_struct->tx_buffer + i) = *(data);
+	}
+
+	if ( HAL_CAN_AddTxMessage(&hcan1, &tx_header, can0_struct->tx_buffer, &tx_mail) != HAL_OK)
+		return C_CAN_TXADD;
+
+	return G_SUCCESS;
+}
+
+void CANRoutine(can* can)
+{
+	peripheral_state *per_state = can->state;
+
+	switch( per_state->state )
+	{
+		case PER_IDLE:
+			return;
+
+		case PER_ERROR:
+		{
+			// Log error
+			per_state->state = PER_IDLE;
+			per_state->cmd = COM_IDLE;
+			SD_LogStatus(per_state->last_code);
+			return;
+		}
+		case PER_DONE:
+		{
+			// Log success
+			per_state->state = PER_IDLE;
+			per_state->cmd = COM_IDLE;
+
+			return;
+		}
+		case PER_WORKING:
+		{
+
+			CAN_ConfigMsg(&tx_header, can);
+
+			// Add new message
+			if ( HAL_CAN_AddTxMessage(&hcan1, &tx_header, can->tx_buffer, &tx_mail) != HAL_OK)
+				PeripheralUpdateState(can->state, C_CAN_TXADD);
+
+			// Log
+			snprintf(msg_buffer, sizeof(msg_buffer), "CAN transmit: %d\n", can->state->cmd);
+			ReturnCode status = SD_LogMsg(msg_buffer);
+
+			can->finished_trans = 0x00;
+			per_state->state = PER_WAITING;
+			return;
+		}
+		case PER_WAITING:
+		{
+			// Wait for response from other module
+			if (can->finished_trans == 0x00)
+				return;
+
+			// If there was an error return status
+			if(per_state->last_code != G_SUCCESS)
+				COM_TransmitResponse(per_state->last_code, NULL, 0);
+
+			// If operation was successful sent results
+			uint8_t number_bytes = 0;
+			switch( *(can->rx_buffer))
+			{
+				case COM_SERVO_READ_TEMP:
+					number_bytes = 1;
+					break;
+				case COM_SERVO_POS_READ:
+					number_bytes = 2;
+					break;
+				case COM_ACC_ANGLES_READ:
+					number_bytes = 6;
+					break;
+				default:
+					number_bytes = 0;
+					break;
+			}
+
+			if (number_bytes == 0)
+				COM_TransmitResponse(per_state->last_code, NULL, 0);
+			else
+				COM_TransmitResponse(per_state->last_code, (can->rx_buffer + 1), number_bytes);
+
+			// Update state
+			PeripheralUpdateState(per_state, G_SUCCESS);
+
+		}
+		default:
+			return;
+	}
+	return;
+}
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 {
@@ -519,6 +735,46 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 			header_sent = 0x00;
 			HAL_UART_Transmit_DMA(&huart2, tx_buffer_DMA + 1, tx_buffer_DMA[0] - 1);
 		}
+	}
+}
+
+void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan )
+{
+	if( HAL_CAN_GetRxMessage(hcan, CAN_RX_FIFO0, &rx_header, (can0_struct->rx_buffer)) != HAL_OK)
+	{
+		PeripheralUpdateState(can0, C_CAN_READ);
+		return;
+	}
+
+	if (module_role == MODULE_CONTROLLER)
+	{
+		if ( can0->cmd != *(can0_struct->rx_buffer))
+		{
+			PeripheralUpdateState(can0, C_CAN_READ);
+			return;
+		}
+
+		PeripheralUpdateState(can0, G_SUCCESS);
+		can0_struct->finished_trans = 0x01;
+	}
+	else
+	{
+		if( (rx_header.StdId & 0x0F) != module_id)
+		{
+			PeripheralUpdateState(can0, C_CAN_READ);
+			return;
+		}
+
+		ReturnCode code = CAN_Decode(can0_struct->rx_buffer, rx_header.DLC - 1);
+		if (code != G_SUCCESS)
+		{
+			// Error handling
+			PeripheralUpdateState(can0, code);
+			return;
+		}
+
+		PeripheralUpdateState(can0, G_SUCCESS);
+		can0_struct->finished_trans = 0x01;
 	}
 }
 /* USER CODE END 4 */
