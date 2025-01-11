@@ -75,7 +75,7 @@ void AccelometerPrepareTransmitData(accelometer* acc, uint8_t* data);
 
 // CAN functions
 ReturnCode CAN_Config();
-void CAN_ConfigMsg(CAN_TxHeaderTypeDef *header, can* can);
+void CAN_ConfigMsg(CAN_TxHeaderTypeDef *header,can* can, uint8_t is_response, COM_COMMAND cmd);
 void CANRoutine(can* can);
 
 // COM functions
@@ -178,6 +178,7 @@ int main(void)
 	Acc0_struct.raw_measurement = acc0_measurment;
 	Acc0_struct.acc_line = 0x00;
 	Acc0_struct.state = acc0;
+
 
 	CAN_Config();
 
@@ -582,20 +583,41 @@ ReturnCode CAN_Config()
 
 
 
-void CAN_ConfigMsg(CAN_TxHeaderTypeDef *header, can* can)
+void CAN_ConfigMsg(CAN_TxHeaderTypeDef *header, can* can, uint8_t is_response, COM_COMMAND cmd)
 {
 	// Get proper identifier
 	header->StdId =  ((can->weight) << 8) | (can->receiver_id);
 
-	// Get data length
-	switch(can->state->cmd)
+	if (is_response == 0x00)
 	{
-		case COM_SERVO_POS_SET:
-			header->DLC = 7;
-			break;
-		default:
-			header->DLC = 2;
+		// Get data length
+		switch(cmd)
+		{
+			case COM_SERVO_POS_SET:
+				header->DLC = 8;
+				break;
+			default:
+				header->DLC = 2;
+				break;
+		}
 	}
+	else
+	{
+		// Get data length
+		switch(cmd)
+		{
+			case COM_SERVO_POS_SET:
+				header->DLC = 3;
+				break;
+			case COM_ACC_ANGLES_READ:
+				header->DLC = 7;
+				break;
+			default:
+				header->DLC = 2;
+				break;
+		}
+	}
+
 
 	header->RTR = CAN_RTR_DATA;
 }
@@ -607,11 +629,11 @@ ReturnCode CAN_TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes,
 
 	can0_struct->weight = CAN_WRITE;
 	*(can0_struct->tx_buffer) = cmd;
-	CAN_ConfigMsg(&tx_header, can0_struct);
+	CAN_ConfigMsg(&tx_header, can0_struct, 0x01, cmd);
 
-	for(uint8_t i = 1; i < bytes; i++)
+	for(uint8_t i = 0; i < bytes; i++)
 	{
-		*(can0_struct->tx_buffer + i) = *(data);
+		*(can0_struct->tx_buffer + i + 1) = *(data + i);
 	}
 
 	if ( HAL_CAN_AddTxMessage(&hcan1, &tx_header, can0_struct->tx_buffer, &tx_mail) != HAL_OK)
@@ -648,7 +670,7 @@ void CANRoutine(can* can)
 		case PER_WORKING:
 		{
 
-			CAN_ConfigMsg(&tx_header, can);
+			CAN_ConfigMsg(&tx_header, can, 0x00, (per_state->cmd));
 
 			// Add new message
 			if ( HAL_CAN_AddTxMessage(&hcan1, &tx_header, can->tx_buffer, &tx_mail) != HAL_OK)
