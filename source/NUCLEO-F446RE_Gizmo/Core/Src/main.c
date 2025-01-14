@@ -799,6 +799,11 @@ void HAL_CAN_RxFifo0MsgPendingCallback(CAN_HandleTypeDef *hcan )
 		can0_struct->finished_trans = 0x01;
 	}
 }
+
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *handle)
+{
+	SD_AlarmRoutine();
+}
 /* USER CODE END 4 */
 
 /**

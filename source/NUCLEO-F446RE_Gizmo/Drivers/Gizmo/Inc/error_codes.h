@@ -32,7 +32,9 @@ typedef enum ReturnCode{
 	C_CAN_OVERFLOW = 0x13,
 	C_CAN_CONFIG = 0x14,
 	C_CAN_READ = 0x15,
-	C_COM_DECODE = 0x16
+	C_COM_DECODE = 0x16,
+	G_SD_INITIALIZED = 0x17,
+	G_SD_NOT_INITIALIZED = 0x18
 }ReturnCode;
 
 

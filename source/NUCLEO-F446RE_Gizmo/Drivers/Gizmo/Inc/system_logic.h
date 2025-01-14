@@ -50,7 +50,7 @@ typedef enum CAN_WEIGHTS{
 }CAN_WEIGHT;
 
 typedef struct peri_states{
-	uint8_t cmd;
+	COM_COMMAND cmd;
 	PERIPHERAL_STATE state;
 	ReturnCode last_code;
 	uint8_t error_count;

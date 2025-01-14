@@ -22,6 +22,10 @@ static SD_STATE state = SD_NOT_INIT;
 
 ReturnCode InitLogging(RTC_HandleTypeDef *handler)
 {
+	// Check if card was already initialized
+	if (state != SD_NOT_INIT)
+		return G_SD_INITIALIZED;
+
 	// Add RTC handler
 	rtc = handler;
 
@@ -50,8 +54,6 @@ ReturnCode InitLogging(RTC_HandleTypeDef *handler)
     	if ( res != FR_OK )
     		return G_FILE_READ;
     }
-
-
     f_close(&file);
 
     state = SD_READY;
@@ -61,7 +63,7 @@ ReturnCode InitLogging(RTC_HandleTypeDef *handler)
 ReturnCode StopLogging()
 {
 	if (state == SD_NOT_INIT)
-		return G_ERROR;
+		return G_SD_NOT_INITIALIZED;
 
 	state = SD_NOT_INIT;
 	return G_SUCCESS;
@@ -70,7 +72,7 @@ ReturnCode StopLogging()
 static ReturnCode SD_WriteTimestamp()
 {
 	if(state == SD_NOT_INIT)
-			return G_ERROR;
+		return G_SD_NOT_INITIALIZED;
 
 	// Get current date and time
 	RTC_TimeTypeDef time;
@@ -92,7 +94,7 @@ static ReturnCode SD_WriteTimestamp()
 	}
 
 	// Open file
-	if ( f_open(&file, file_name,FA_OPEN_APPEND | FA_WRITE) != FR_OK )
+	if ( f_open(&file, file_name, FA_OPEN_APPEND | FA_WRITE) != FR_OK )
 		return G_FILE_WRITE;
 
 	// Write timestamp
@@ -145,7 +147,7 @@ ReturnCode SD_LogStatus(ReturnCode error)
 			f_puts("Servo: Can't write data!\n", &file);
 			break;
 		case G_SERVO_READ:
-			f_puts("Servo: Can't read data!\n", &file);
+			f_puts("Servo: Can't read data!\n", &file);4
 			break;
 		default:
 			f_puts("Unknown error!\n", &file);
