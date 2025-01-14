@@ -1,0 +1,6 @@
+../Drivers/Gizmo/Src/system_logic.c:3:21:Local_AddCMD	16	static
+../Drivers/Gizmo/Src/system_logic.c:18:21:CAN_AddCMD	16	static
+../Drivers/Gizmo/Src/system_logic.c:29:21:DecodeOpCode	32	static
+../Drivers/Gizmo/Src/system_logic.c:159:12:UART_Decode	24	static
+../Drivers/Gizmo/Src/system_logic.c:184:12:CAN_Decode	16	static
+../Drivers/Gizmo/Src/system_logic.c:192:6:PeripheralUpdateState	16	static

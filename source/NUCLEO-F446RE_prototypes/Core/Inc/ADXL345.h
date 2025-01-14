@@ -1,31 +1,29 @@
-/*
- * ADXL345.h
- *
- *  Created on: Dec 17, 2024
- *      Author: Barabash
- */
-
 #ifndef INC_ADXL345_H_
 #define INC_ADXL345_H_
 
 #include "stm32f4xx_hal.h"
 #include "error_codes.h"
 
+#define ACC0_LINE 0x00
+#define ACC1_LINE 0x01
+
 #define ACC_I2C_TIMEOUT 100
 #define ACC_ALT_ADDRESS 0xA6
-//#define ACC_READ_OPERATION 0xA7
-//#define ACC_WRITE_OPERATION 0xA6
 
 #define ACC_X0_REG 0x32
 #define ACC_PWR_CTRL_REG 0x2D
 #define ACC_DATA_FORMAT_REG 0x31
+#define ACC_BW_RATE_REG 0x2C
+#define ACC_FIFO_CTL_REG 0x38
+#define ACC_INT_ENB_REG 0x2E
 
-extern I2C_HandleTypeDef *acc_i2c;
+extern I2C_HandleTypeDef *acc0_i2c;
+extern I2C_HandleTypeDef *acc1_i2c;
 
-void AccAdd_I2CHandler(I2C_HandleTypeDef* handler);
-ReturnCode AccRead(uint8_t* buffer, uint8_t address, uint8_t bytes_number);
-ReturnCode AccRawMeasurment(int16_t* xyz_buffer);
-ReturnCode AccAvgMeasurment(int16_t *xyz_buffer, uint32_t samples);
-ReturnCode AccSelfTest(int16_t* result_buffer);
+ReturnCode Acc_AddController(I2C_HandleTypeDef* handler, uint32_t pin, uint32_t port, uint8_t line);
+ReturnCode Acc_RawMeasurment(int16_t* xyz_buffer, uint8_t line);
+ReturnCode Acc_AvgMeasurment(int16_t *xyz_buffer, uint32_t samples, uint8_t line);
+ReturnCode Acc_SelfTest(int16_t* result_buffer, uint8_t line);
+ReturnCode Acc_Config(uint8_t line);
 
 #endif /* INC_ADXL345_H_ */

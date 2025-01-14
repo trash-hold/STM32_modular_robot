@@ -1,0 +1,16 @@
+../Core/Src/main.c:129:5:main	2
+../Core/Src/main.c:220:6:SystemClock_Config	3
+../Core/Src/main.c:266:12:TransmitResponse	2
+../Core/Src/main.c:277:12:COM_TransmitResponse	6
+../Core/Src/main.c:320:12:Screen_ServoUpdate	2
+../Core/Src/main.c:329:6:ServoRoutine	13
+../Core/Src/main.c:445:6:AccelometerPrepareTransmitData	3
+../Core/Src/main.c:466:6:AccelometerRoutine	9
+../Core/Src/main.c:545:12:CAN_Config	1
+../Core/Src/main.c:586:6:CAN_ConfigMsg	5
+../Core/Src/main.c:625:12:CAN_TransmitResponse	4
+../Core/Src/main.c:645:6:CANRoutine	13
+../Core/Src/main.c:730:6:HAL_UART_RxCpltCallback	3
+../Core/Src/main.c:751:6:HAL_UART_TxCpltCallback	3
+../Core/Src/main.c:763:6:HAL_CAN_RxFifo0MsgPendingCallback	6
+../Core/Src/main.c:808:6:Error_Handler	1

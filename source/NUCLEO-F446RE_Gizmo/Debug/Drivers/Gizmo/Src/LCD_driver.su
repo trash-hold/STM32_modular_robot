@@ -1,0 +1,7 @@
+../Drivers/Gizmo/Src/LCD_driver.c:21:6:Screen_Init	16	static
+../Drivers/Gizmo/Src/LCD_driver.c:29:13:Screen_Draw_HeaderJustified	40	static
+../Drivers/Gizmo/Src/LCD_driver.c:35:6:Screen_DrawInitScreen	32	static
+../Drivers/Gizmo/Src/LCD_driver.c:75:12:Screen_DrawNextInit	24	static
+../Drivers/Gizmo/Src/LCD_driver.c:191:6:Screen_DrawInfoScreen	32	static
+../Drivers/Gizmo/Src/LCD_driver.c:253:12:Screen_UpdateStatus	32	static
+../Drivers/Gizmo/Src/LCD_driver.c:287:12:Screen_UpdateData	56	static

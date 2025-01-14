@@ -101,20 +101,8 @@ int main(void)
   /* USER CODE BEGIN 2 */
 
   // Change ADXL345 operation mode into measurement
-  AccAdd_I2CHandler(&hi2c1);
-  i2c_tx_buff[0] = PWR_CTR_REG;
-  i2c_tx_buff[1] = 0x00;
-
-  HAL_StatusTypeDef status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
-  i2c_tx_buff[0] = PWR_CTR_REG;
-  i2c_tx_buff[1] = 0x08;
-
-  status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
-
-  i2c_tx_buff[0] = 0x31;
-  i2c_tx_buff[1] = 0x01;
-
-  status = HAL_I2C_Master_Transmit(&hi2c1, ADXL345_ALT_ADR, i2c_tx_buff, 2, 500);
+  Acc_AddController(&hi2c1, GPIOC, GPIO_PIN_4, 0x00);
+  Acc_Config(0x00);
 
   /* USER CODE END 2 */
 
@@ -126,7 +114,7 @@ int main(void)
 	  HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x32, 1, rx_buff, 6, 200);
 
 	  // Avg measurment
-	  AccAvgMeasurment(i2c_rx_buff, 32);
+	  Acc_AvgMeasurment(i2c_rx_buff, 32, 0x00);
 	  //ReturnCode ret = AccSelfTest(i2c_rx_buff);
 	  GetTiltAngles(angles, i2c_rx_buff);
 

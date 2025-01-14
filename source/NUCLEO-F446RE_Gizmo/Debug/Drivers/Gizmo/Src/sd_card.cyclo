@@ -1,0 +1,6 @@
+../Drivers/Gizmo/Src/sd_card.c:23:12:InitLogging	6
+../Drivers/Gizmo/Src/sd_card.c:61:12:StopLogging	2
+../Drivers/Gizmo/Src/sd_card.c:70:19:SD_WriteTimestamp	6
+../Drivers/Gizmo/Src/sd_card.c:106:12:SD_LogStatus	13
+../Drivers/Gizmo/Src/sd_card.c:159:12:SD_LogMsg	4
+../Drivers/Gizmo/Src/sd_card.c:180:6:SD_AlarmRoutine	1

@@ -1,0 +1,6 @@
+../Drivers/Gizmo/Src/ADXL345.c:8:12:Acc_AddController	16	static
+../Drivers/Gizmo/Src/ADXL345.c:25:19:Acc_Cmd	32	static
+../Drivers/Gizmo/Src/ADXL345.c:37:19:Acc_Read	48	static
+../Drivers/Gizmo/Src/ADXL345.c:49:12:Acc_RawMeasurment	24	static
+../Drivers/Gizmo/Src/ADXL345.c:67:12:Acc_AvgMeasurment	40	static
+../Drivers/Gizmo/Src/ADXL345.c:98:12:Acc_SelfTest	32	static
