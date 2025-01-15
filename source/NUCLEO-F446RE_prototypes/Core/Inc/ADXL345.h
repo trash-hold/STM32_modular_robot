@@ -20,7 +20,7 @@
 extern I2C_HandleTypeDef *acc0_i2c;
 extern I2C_HandleTypeDef *acc1_i2c;
 
-ReturnCode Acc_AddController(I2C_HandleTypeDef* handler, uint32_t pin, uint32_t port, uint8_t line);
+ReturnCode Acc_AddController(I2C_HandleTypeDef* handler, GPIO_TypeDef *port, uint32_t pin, uint8_t line);
 ReturnCode Acc_RawMeasurment(int16_t* xyz_buffer, uint8_t line);
 ReturnCode Acc_AvgMeasurment(int16_t *xyz_buffer, uint32_t samples, uint8_t line);
 ReturnCode Acc_SelfTest(int16_t* result_buffer, uint8_t line);

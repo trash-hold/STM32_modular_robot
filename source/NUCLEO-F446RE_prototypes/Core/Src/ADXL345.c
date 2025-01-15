@@ -3,7 +3,7 @@
 typedef struct ACC_CONFIG{
 	I2C_HandleTypeDef* handle;
 	uint32_t pin;
-	uint32_t port;
+	GPIO_TypeDef *port;
 }acc_config;
 
 acc_config acc0;
@@ -11,7 +11,7 @@ acc_config acc1;
 int16_t read_buff[3];
 uint8_t data_buffer[6];
 
-ReturnCode Acc_AddController(I2C_HandleTypeDef* handler, uint32_t pin, uint32_t port, uint8_t line)
+ReturnCode Acc_AddController(I2C_HandleTypeDef* handler, GPIO_TypeDef *port, uint32_t pin, uint8_t line)
 {
 	switch(line)
 	{
@@ -62,23 +62,34 @@ ReturnCode Acc_Config(uint8_t line)
 
 	I2C_HandleTypeDef* acc_i2c = (line == ACC0_LINE ? acc0.handle : acc1.handle);
 
+	// Turn power off
+	ReturnCode status = Acc_Cmd(acc_i2c, ACC_PWR_CTRL_REG, 0x00);
+	if (status != G_SUCCESS)
+		return status;
+
 	// Put accelometer to measure with 3200Hz baudrate
-	ReturnCode status = Acc_Cmd(acc_i2c, ACC_BW_RATE_REG, 0x0F);
+	status = Acc_Cmd(acc_i2c, ACC_BW_RATE_REG, 0x0F);
+	if (status != G_SUCCESS)
+		return status;
+
+	// Change Fifo mode to stream, and change watermark to 0x07 = 11|0|00111
+	status = Acc_Cmd(acc_i2c, ACC_FIFO_CTL_REG, 0x87);
+	if (status != G_SUCCESS)
+		return status;
+
+	// Clear interrupt bits by reading register
+	uint8_t temp;
+	status = Acc_Read(acc_i2c, &temp, 0x30, 1);
+	if (status != G_SUCCESS)
+		return status;
+
+	// Enable data_ready intterrupt
+	status = Acc_Cmd(acc_i2c, ACC_INT_ENB_REG, 0x80);
 	if (status != G_SUCCESS)
 		return status;
 
 	// Get acc to measurment mode
 	status = Acc_Cmd(acc_i2c, ACC_PWR_CTRL_REG, 0x08);
-	if (status != G_SUCCESS)
-		return status;
-
-	// Change Fifo mode to stream, and change watermark to 0x0F = 11|0|01111
-	status = Acc_Cmd(acc_i2c, ACC_FIFO_CTL_REG, 0xCF);
-	if (status != G_SUCCESS)
-		return status;
-
-	// Enable watermark intterrupt
-	status = Acc_Cmd(acc_i2c, ACC_INT_ENB_REG, 0x02);
 	if (status != G_SUCCESS)
 		return status;
 
@@ -115,15 +126,6 @@ ReturnCode Acc_AvgMeasurment(int16_t *xyz_buffer, uint32_t samples, uint8_t line
 	int32_t avg_y = 0;
 	int32_t avg_z = 0;
 
-	// Empty the buffer
-	ReturnCode status = Acc_Cmd(acc->handle, ACC_FIFO_CTL_REG, 0x00);
-	if(status != G_SUCCESS)
-		return status;
-	// Reconfig buffer
-	status = Acc_Cmd(acc->handle, ACC_FIFO_CTL_REG, 0xCF);
-	if(status != G_SUCCESS)
-		return status;
-
 	// Get sum
 	uint32_t start_time;
 	for(uint16_t i = 1; i <= samples; i++)
@@ -135,7 +137,7 @@ ReturnCode Acc_AvgMeasurment(int16_t *xyz_buffer, uint32_t samples, uint8_t line
 			if (HAL_GetTick() - start_time > ACC_I2C_TIMEOUT)
 				return G_ACC_READ;
 		}
-		status = Acc_RawMeasurment(read_buff, line);
+		ReturnCode status = Acc_RawMeasurment(read_buff, line);
 
 		if(status != G_SUCCESS)
 			return status;

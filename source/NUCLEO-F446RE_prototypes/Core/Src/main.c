@@ -111,7 +111,7 @@ int main(void)
   while (1)
   {
 	  // Manual measurement
-	  HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x32, 1, rx_buff, 6, 200);
+	  HAL_I2C_Mem_Read(&hi2c1, ADXL345_ALT_ADR, 0x38, 1, rx_buff, 2, 200);
 
 	  // Avg measurment
 	  Acc_AvgMeasurment(i2c_rx_buff, 32, 0x00);
