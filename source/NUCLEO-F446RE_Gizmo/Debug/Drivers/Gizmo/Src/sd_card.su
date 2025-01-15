@@ -1,6 +1,0 @@
-../Drivers/Gizmo/Src/sd_card.c:23:12:InitLogging	56	static
-../Drivers/Gizmo/Src/sd_card.c:61:12:StopLogging	4	static
-../Drivers/Gizmo/Src/sd_card.c:70:19:SD_WriteTimestamp	48	static
-../Drivers/Gizmo/Src/sd_card.c:106:12:SD_LogStatus	24	static
-../Drivers/Gizmo/Src/sd_card.c:159:12:SD_LogMsg	24	static
-../Drivers/Gizmo/Src/sd_card.c:180:6:SD_AlarmRoutine	4	static

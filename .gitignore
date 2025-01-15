@@ -14,3 +14,4 @@ tools/fff/*
 **.obj
 **.o
 tests/build/**
+**/Debug/**

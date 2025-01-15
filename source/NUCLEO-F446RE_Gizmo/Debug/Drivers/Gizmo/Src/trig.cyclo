@@ -1,9 +1,0 @@
-../Drivers/Gizmo/Src/trig.c:13:14:interpolate_x	2
-../Drivers/Gizmo/Src/trig.c:25:14:interpolate_y	1
-../Drivers/Gizmo/Src/trig.c:34:14:LUT_Interpolate_X	4
-../Drivers/Gizmo/Src/trig.c:53:14:LUT_Interpolate_Y	2
-../Drivers/Gizmo/Src/trig.c:67:7:LUT_ASine	6
-../Drivers/Gizmo/Src/trig.c:99:7:LUT_Sine	3
-../Drivers/Gizmo/Src/trig.c:122:7:LUT_Tan	3
-../Drivers/Gizmo/Src/trig.c:146:7:LUT_ATan	6
-../Drivers/Gizmo/Src/trig.c:182:6:GetTiltAngles	1
