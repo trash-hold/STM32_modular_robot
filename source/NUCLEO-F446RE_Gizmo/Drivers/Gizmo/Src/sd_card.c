@@ -147,7 +147,7 @@ ReturnCode SD_LogStatus(ReturnCode error)
 			f_puts("Servo: Can't write data!\n", &file);
 			break;
 		case G_SERVO_READ:
-			f_puts("Servo: Can't read data!\n", &file);4
+			f_puts("Servo: Can't read data!\n", &file);
 			break;
 		default:
 			f_puts("Unknown error!\n", &file);

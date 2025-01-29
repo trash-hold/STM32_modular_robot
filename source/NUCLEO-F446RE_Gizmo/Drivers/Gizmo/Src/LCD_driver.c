@@ -72,7 +72,7 @@ void Screen_DrawInitScreen()
 	current_screen = INIT_SCREEN;
 }
 
-ReturnCode Screen_DrawNextInit(PERIPHERAL per, uint8_t clear)
+ReturnCode Screen_DrawNextInit(PERIPHERAL per)
 {
 	// Check if displayed panel is correct
 	if (current_screen != INIT_SCREEN)
@@ -81,103 +81,59 @@ ReturnCode Screen_DrawNextInit(PERIPHERAL per, uint8_t clear)
 	switch(per)
 	{
 		case CAN:
-			// If clear is needed overwrite
-			if (clear == 0x01)
-			{
-				Screen_Draw_HeaderJustified(135, "CAN init", 8, &Font12, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(150, "Servo0 init", 11, &Font8, LCD_BACKGROUND);
-				return G_SUCCESS;
-			}
-			// If write is needed clear previous sequence
-			Screen_DrawNextInit(0xFF, 0x01);
+			//Clear first
+			LCD_DrawRectangle(20, 125, 110, 160, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+
 			Screen_Draw_HeaderJustified(135, "CAN init", 8, &Font12, WHITE);
 			Screen_Draw_HeaderJustified(150, "Servo0 init", 11, &Font8, WHITE);
 			break;
 		case SERVO_0:
-			// If clear is needed overwrite
-			if (clear == 0x01)
-			{
-				Screen_Draw_HeaderJustified(125, "CAN init", 8, &Font8, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(135, "Servo0 init", 11, &Font12, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(150, "Servo1 init", 11, &Font8, LCD_BACKGROUND);
-				return G_SUCCESS;
-			}
-			// If write is needed clear previous sequence
-			Screen_DrawNextInit(CAN, 0x01);
+			//Clear first
+			LCD_DrawRectangle(20, 125, 110, 160, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+
 			Screen_Draw_HeaderJustified(125, "CAN init", 8, &Font8, DARK_GREEN);
 			Screen_Draw_HeaderJustified(135, "Servo0 init", 11, &Font12, WHITE);
 			Screen_Draw_HeaderJustified(150, "Servo1 init", 11, &Font8, WHITE);
 			break;
 
 		case SERVO_1:
-			// If clear is needed overwrite
-			if (clear == 0x01)
-			{
-				Screen_Draw_HeaderJustified(125, "Servo0 init", 11, &Font8, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(135, "Servo1 init", 11, &Font12, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(150, "Acc0 init", 9, &Font8, LCD_BACKGROUND);
-				return G_SUCCESS;
-			}
-			// If write is needed clear previous sequence
-			Screen_DrawNextInit(SERVO_0, 0x01);
+			//Clear first
+			LCD_DrawRectangle(20, 125, 110, 160, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+
 			Screen_Draw_HeaderJustified(125, "Servo0 init", 11, &Font8, DARK_GREEN);
 			Screen_Draw_HeaderJustified(135, "Servo1 init", 11, &Font12, WHITE);
 			Screen_Draw_HeaderJustified(150, "Acc0 init", 9, &Font8, WHITE);
 			break;
 
 		case ACC_0:
-			// If clear is needed overwrite
-			if (clear == 0x01)
-			{
-				Screen_Draw_HeaderJustified(125, "Servo1 init", 11, &Font8, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(135, "Acc0 init", 9, &Font12, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(150, "Acc1 init", 9, &Font8, LCD_BACKGROUND);
-				return G_SUCCESS;
-			}
-			// If write is needed clear previous sequence
-			Screen_DrawNextInit(SERVO_1, 0x01);
+			//Clear first
+			LCD_DrawRectangle(20, 125, 110, 160, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+
 			Screen_Draw_HeaderJustified(125, "Servo1 init", 11, &Font8, DARK_GREEN);
 			Screen_Draw_HeaderJustified(135, "Acc0 init", 9, &Font12, WHITE);
 			Screen_Draw_HeaderJustified(150, "Acc1 init", 9, &Font8, WHITE);
 			break;
 		case ACC_1:
-			// If clear is needed overwrite
-			if (clear == 0x01)
-			{
-				Screen_Draw_HeaderJustified(125, "Acc0 init", 9, &Font8, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(135, "Acc1 init", 9, &Font12, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(150, "SD init", 7, &Font8, LCD_BACKGROUND);
-				return G_SUCCESS;
-			}
-			// If write is needed clear previous sequence
-			Screen_DrawNextInit(ACC_0, 0x01);
+			//Clear first
+			LCD_DrawRectangle(20, 125, 110, 160, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+
 			Screen_Draw_HeaderJustified(125, "Acc0 init", 9, &Font8, DARK_GREEN);
 			Screen_Draw_HeaderJustified(135, "Acc1 init", 9, &Font12, WHITE);
 			Screen_Draw_HeaderJustified(150, "SD init", 7, &Font8, WHITE);
 			break;
 		case SD:
-			// If clear is needed overwrite
-			if (clear == 0x01)
-			{
-				Screen_Draw_HeaderJustified(125, "Acc1 init", 9, &Font8, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(135, "SD init", 7, &Font12, LCD_BACKGROUND);
-				Screen_Draw_HeaderJustified(150, "Done", 4, &Font8, LCD_BACKGROUND);
-				return G_SUCCESS;
-			}
-			// If write is needed clear previous sequence
-			Screen_DrawNextInit(ACC_1, 0x01);
+			//Clear first
+			LCD_DrawRectangle(20, 125, 110, 160, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+
 			Screen_Draw_HeaderJustified(125, "Acc1 init", 9, &Font8, DARK_GREEN);
 			Screen_Draw_HeaderJustified(135, "SD init", 7, &Font12, WHITE);
 			Screen_Draw_HeaderJustified(150, "Done", 4, &Font8, WHITE);
 			break;
 
 		default:
-			if(clear == 0x00)
-			{
-				Screen_DrawNextInit(SD, 0x01);
-				Screen_Draw_HeaderJustified(135, "Done", 4, &Font12, DARK_GREEN);
-				return G_SUCCESS;
-			}
+			//Clear first
+			LCD_DrawRectangle(20, 125, 110, 160, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
+
 			Screen_Draw_HeaderJustified(135, "Done", 4, &Font12, LCD_BACKGROUND);
 			Screen_Draw_HeaderJustified(135, "Initializing", 12, &Font12, LCD_BACKGROUND);
 			Screen_Draw_HeaderJustified(150, "Please wait", 11, &Font8, LCD_BACKGROUND);

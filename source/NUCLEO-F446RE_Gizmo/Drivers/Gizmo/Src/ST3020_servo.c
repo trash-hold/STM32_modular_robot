@@ -244,16 +244,19 @@ ReturnCode ServoPing(uint8_t servo_line, uint8_t id)
 
 ReturnCode ServoTemp(uint8_t servo_line, uint8_t* temp)
 {
-	ReturnCode status = ServoRead(servo_line, SERVO_TEMP_REG, temp, 1);
-
-	return status;
+	return ServoRead(servo_line, SERVO_TEMP_REG, temp, 1);
 }
 
-ReturnCode ServoCurrentPosition(uint8_t servo_line, uint16_t* result)
+ReturnCode ServoCurrentPosition(uint8_t servo_line, int16_t* result)
 {
 	uint8_t pos_bytes[2];
 	ReturnCode status = ServoRead(servo_line, SERVO_POS_REG, pos_bytes, 2);
 
-	*(result) = (( (uint16_t) pos_bytes[1] << 8) | pos_bytes[0] );
+	*(result) = ((( (uint16_t) pos_bytes[1] & 0x7F) << 8) | pos_bytes[0] );
+
+	// Pos is negative
+	if ( pos_bytes[1] & 0x80 != 0x00)
+		*(result) = -*(result);
+
 	return status;
 }

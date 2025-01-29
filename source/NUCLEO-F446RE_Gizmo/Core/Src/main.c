@@ -66,10 +66,12 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 
 // Servo Functions
+void ServoConfigure(uint8_t line);
 void ServoRoutine(servo* servo);
 ReturnCode Screen_ServoUpdate(servo* servo);
 
 // Acc Functions
+ReturnCode AccConfigure(uint8_t line);
 void AccelometerRoutine(accelometer* acc);
 void AccelometerPrepareTransmitData(accelometer* acc, uint8_t* data);
 
@@ -87,7 +89,7 @@ ReturnCode TransmitResponse(ReturnCode status, uint8_t *data, uint8_t bytes, COM
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 uint8_t module_id = 0x01;
-uint8_t module_role = MODULE_TARGET;
+uint8_t module_role = MODULE_CONTROLLER;
 
 // Uart DMA
 uint8_t tx_buffer_DMA[DMA_TX_SIZE];
@@ -96,8 +98,8 @@ uint8_t header_received = 0x00;
 uint8_t header_sent = 0x00;
 
 //Peripherals
-servo Servo0_struct;
-accelometer Acc0_struct;
+servo Servo0_struct, Servo1_struct;
+accelometer Acc0_struct, Acc1_struct;
 
 can Can_struct;
 can* can0_struct;
@@ -160,38 +162,26 @@ int main(void)
   MX_I2C1_Init();
   MX_UART4_Init();
   MX_CAN1_Init();
+  MX_I2C2_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
-  	InitLogging(&hrtc);
+  	// Initialize peripherals
   	Screen_Init();
   	Screen_DrawInitScreen();
 
-	servo0 = &Servo0;
-	servo1 = &Servo1;
-	acc0 = &Acc0;
-	acc1 = &Acc1;
+  	Screen_DrawNextInit(CAN);
 
-	Servo0_struct.tx_buffer = servo0_tx_buff;
-	Servo0_struct.servo_line = 0x00;
-	Servo0_struct.state = servo0;
+  	ServoConfigure(0x00);
+  	ServoConfigure(0x01);
 
-	Acc0_struct.angles = acc0_angles;
-	Acc0_struct.raw_measurement = acc0_measurment;
-	Acc0_struct.acc_line = 0x00;
-	Acc0_struct.state = acc0;
+  	AccConfigure(0x00);
+  	AccConfigure(0x01);
 
+  	InitLogging(&hrtc);
+  	Screen_DrawNextInit(SD);
 
-	CAN_Config();
-
-
-
-	Servo_AddControler(0x00, &huart4);
-	ServoSetPos(0x00, 0x00, 3400, 50);
-
-	ReturnCode status = Acc_AddController(&hi2c1, 0x00);
-	status = Acc_SelfTest(acc0_measurment, 0x00);
-
+  	// Go into work mode
 	Screen_DrawInfoScreen();
-
 	HAL_UART_Receive_DMA(&huart2, rx_buffer_DMA, 1);
 
   /* USER CODE END 2 */
@@ -203,9 +193,9 @@ int main(void)
 	  if(module_role == MODULE_CONTROLLER)
 		  CANRoutine(can0_struct);
 	  ServoRoutine(&Servo0_struct);
+	  ServoRoutine(&Servo1_struct);
 	  AccelometerRoutine(&Acc0_struct);
-
-
+	  AccelometerRoutine(&Acc1_struct);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -326,6 +316,34 @@ ReturnCode Screen_ServoUpdate(servo* servo)
 	return Screen_UpdateData( ((servo->servo_line == 0x00) ? SERVO_0: SERVO_1), data, 2);
 }
 
+void ServoConfigure(uint8_t line)
+{
+	if(line == 0x00)
+	{
+		servo0 = &Servo0;
+		Servo0_struct.tx_buffer = servo0_tx_buff;
+		Servo0_struct.servo_line = line;
+		Servo0_struct.state = servo0;
+
+		Servo_AddControler(0x00, &huart4);
+	}
+	else if(line == 0x01)
+	{
+		servo1 = &Servo1;
+		Servo1_struct.tx_buffer = servo1_tx_buff;
+		Servo1_struct.servo_line = line;
+		Servo1_struct.state = servo1;
+
+		Servo_AddControler(0x00, &huart1);
+	}
+	else
+		return;
+
+
+	ServoSetPos(line, 0x00, 500, 10);
+	Screen_DrawNextInit(line==0x00 ? SERVO_0 : SERVO_1);
+}
+
 void ServoRoutine(servo *servo)
 {
 	peripheral_state *per_state = servo->state;
@@ -441,6 +459,49 @@ void ServoRoutine(servo *servo)
 	}
 	return;
 }
+
+ReturnCode AccConfigure(uint8_t line)
+{
+	ReturnCode status;
+	if(line == 0x00)
+	{
+		acc0 = &Acc0;
+		Acc0_struct.angles = acc0_angles;
+		Acc0_struct.raw_measurement = acc0_measurment;
+		Acc0_struct.acc_line = line;
+		Acc0_struct.state = acc0;
+
+		status = Acc_AddController(&hi2c1, line);
+		if(status != G_SUCCESS)
+			return status;
+
+		status = Acc_SelfTest(acc0_measurment, 0x00);
+		if(status != G_SUCCESS)
+			return status;
+
+	}
+	else if(line == 0x01)
+	{
+		acc1 = &Acc1;
+		Acc1_struct.angles = acc1_angles;
+		Acc1_struct.raw_measurement = acc1_measurment;
+		Acc1_struct.acc_line = line;
+		Acc1_struct.state = acc1;
+
+		status = Acc_AddController(&hi2c2, line);
+		if(status != G_SUCCESS)
+			return status;
+
+		status = Acc_SelfTest(acc1_measurment, 0x01);
+		if(status != G_SUCCESS)
+			return status;
+	}
+	else
+		return;
+
+	Screen_DrawNextInit( line == 0x00 ? ACC_0 : ACC_1);
+}
+
 
 void AccelometerPrepareTransmitData(accelometer* acc, uint8_t* data)
 {

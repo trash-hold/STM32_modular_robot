@@ -45,7 +45,7 @@ static TRANS_STATUS DecodeOpCode(uint8_t* msg, uint8_t cmd, uint8_t bytes, uint8
 		case COM_SERVO_POS_SET:
 		{
 			// Check if there is enough data
-			if(bytes != 7)
+			if(bytes != 6)
 				return TRANS_ERROR;
 
 			uint8_t servo_line = *(msg);
@@ -175,7 +175,7 @@ ReturnCode UART_Decode(uint8_t* msg_buffer)
 	uint8_t received_id = *(msg_buffer + ID_POS_BYTE);
 	uint8_t received_cmd = *(msg_buffer + CMD_POS_BYTE);
 
-	if (DecodeOpCode(msg_buffer + PER_LINE_BYTE, received_cmd, data_bytes - 3, received_id) != TRANS_OK)
+	if (DecodeOpCode(msg_buffer + PER_LINE_BYTE, received_cmd, data_bytes - 4, received_id) != TRANS_OK)
 		return C_COM_DECODE;
 
 	return G_SUCCESS;
