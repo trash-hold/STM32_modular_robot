@@ -26,7 +26,7 @@ ReturnCode Servo_AddControler(uint8_t servo_line, UART_HandleTypeDef* handler)
 			uart_s2 = handler;
 			break;
 		default:
-			return G_ERROR;
+			return C_UART_HANDLE;
 	}
 
 	return G_SUCCESS;
@@ -38,7 +38,7 @@ static ReturnCode ServoWrite(UART_HandleTypeDef* uart, uint8_t cmd, uint8_t reg,
 	HAL_StatusTypeDef status = HAL_HalfDuplex_EnableTransmitter(uart);
 	if (status != HAL_OK)
 	{
-		return G_ERROR;
+		return C_UART_TRANSMIT;
 	}
 
 	// Create helper buffer
@@ -73,7 +73,7 @@ static ReturnCode ServoWrite(UART_HandleTypeDef* uart, uint8_t cmd, uint8_t reg,
 
 	status = HAL_UART_Transmit(uart, tx_buffer, 6, SERVO_TIMEOUT);
 	if (status != HAL_OK)
-		return G_ERROR;
+		return C_UART_TRANSMIT;
 
 	// Load data to tx_buff
 	for (uint8_t i = 0; i < len; i++)
@@ -84,7 +84,7 @@ static ReturnCode ServoWrite(UART_HandleTypeDef* uart, uint8_t cmd, uint8_t reg,
 
 	status = HAL_UART_Transmit(uart, tx_buffer, len + 1, SERVO_TIMEOUT);
 	if( status != HAL_OK)
-		return G_ERROR;
+		return C_UART_TRANSMIT;
 
 	return G_SUCCESS;
 }
@@ -101,7 +101,7 @@ ReturnCode ServoSetPos(uint8_t servo_line, uint16_t pos, uint16_t speed, uint8_t
 			uart = uart_s2;
 			break;
 		default:
-			return G_ERROR;
+			return C_UART_HANDLE;
 	}
 
 	uint8_t buff[7];
@@ -133,17 +133,17 @@ ReturnCode ServoRead(uint8_t servo_line, uint8_t reg, uint8_t* data_buffer, uint
 			uart = uart_s2;
 			break;
 		default:
-			return G_ERROR;
+			return C_UART_HANDLE;
 	}
 
 	// Send data receive request
 	if (ServoWrite(uart, SERVO_READ_INS, reg, &bytes, 1) != G_SUCCESS)
-		return G_ERROR;
+		return G_SERVO_WRTIE;
 
 	// Change mode into Receiver
 	HAL_StatusTypeDef status = HAL_HalfDuplex_EnableReceiver(uart);
 	if (status != HAL_OK)
-		return G_ERROR;
+		return C_UART_RECEIVE;
 
 	// Servo sends additional header message
 	uint8_t header_buffer[5];
@@ -156,11 +156,11 @@ ReturnCode ServoRead(uint8_t servo_line, uint8_t reg, uint8_t* data_buffer, uint
 
 	status = HAL_UART_Receive(uart, data_buffer, bytes, SERVO_TIMEOUT);
 	if (status != HAL_OK)
-		return G_ERROR;
+		return C_UART_RECEIVE;
 
 	// Verify ID and transmission length
 	if ( (header_buffer[2] != 0x01) || (header_buffer[3] != bytes + 0x02) )
-		return G_ERROR;
+		return C_UART_RECEIVE;
 
 	return G_SUCCESS;
 }
@@ -177,13 +177,13 @@ ReturnCode ServoPing(uint8_t servo_line, uint8_t id)
 			uart = uart_s2;
 			break;
 		default:
-			return G_ERROR;
+			return C_UART_HANDLE;
 	}
 
 	HAL_StatusTypeDef status = HAL_HalfDuplex_EnableTransmitter(uart);
 	if (status != HAL_OK)
 	{
-		return G_ERROR;
+		return C_UART_TRANSMIT;
 	}
 
 	// Ping buffer
@@ -201,52 +201,62 @@ ReturnCode ServoPing(uint8_t servo_line, uint8_t id)
 	// Send details
 	status = HAL_UART_Transmit(uart, buffer, 5, SERVO_TIMEOUT);
 	if (status != HAL_OK)
-		return G_ERROR;
+		return C_UART_TRANSMIT;
 
 	// Send checksum
 	status = HAL_UART_Transmit(uart, &checksum, 1, SERVO_TIMEOUT);
 		if (status != HAL_OK)
-			return G_ERROR;
+			return C_UART_TRANSMIT;
 
 	// Change mode into receiver and get ping response
 	status = HAL_HalfDuplex_EnableReceiver(uart);
 	if (status != HAL_OK)
-		return G_ERROR;
+		return C_UART_RECEIVE;
 
-	status = HAL_UART_Receive(uart, buffer, 6, SERVO_TIMEOUT);
+	status = HAL_UART_Receive(uart, buffer, 1, SERVO_TIMEOUT);
 	if (status != HAL_OK)
-		return G_ERROR;
+		return C_UART_RECEIVE;
+
+	if(buffer[0] != 0xFF)
+		status = HAL_UART_Receive(uart, buffer, 6, SERVO_TIMEOUT);
+	else
+		status = HAL_UART_Receive(uart, buffer + 1, 5, SERVO_TIMEOUT);
+
+	if (status != HAL_OK)
+		return C_UART_RECEIVE;
+
 	// First two bytes are buffer so they are skipped
 
 	if ( buffer[2] != id )
-		return G_ERROR;
+		return G_SERVO_READ;
 
 	if ( buffer[3] != 0x02)
-		return G_ERROR;
+		return G_SERVO_READ;
 
 	checksum = buffer[2] + buffer[3] + buffer[4];
 	checksum = ~checksum;
 	if ( checksum != buffer[5] )
-		return G_ERROR;
+		return G_SERVO_READ;
 
 	return G_SUCCESS;
 }
 
 
-uint16_t ServoTemp(uint8_t servo_line)
+ReturnCode ServoTemp(uint8_t servo_line, uint8_t* temp)
 {
-	uint8_t temp = 0;
-
-	ReturnCode status = ServoRead(servo_line, SERVO_TEMP_REG, &temp, 1);
-
-	return (((uint16_t) status  << 8) | temp);
+	return ServoRead(servo_line, SERVO_TEMP_REG, temp, 1);
 }
 
-ReturnCode ServoCurrentPosition(uint8_t servo_line, uint16_t* result)
+ReturnCode ServoCurrentPosition(uint8_t servo_line, int16_t* result)
 {
 	uint8_t pos_bytes[2];
 	ReturnCode status = ServoRead(servo_line, SERVO_POS_REG, pos_bytes, 2);
 
-	*(result) = (( (uint16_t) pos_bytes[1] << 8) | pos_bytes[0] );
+	*(result) = ((( (uint16_t) pos_bytes[1] & 0x7F) << 8) | pos_bytes[0] );
+
+	// Pos is negative
+	if ( pos_bytes[1] & 0x80 != 0x00)
+		*(result) = -*(result);
+
 	return status;
 }

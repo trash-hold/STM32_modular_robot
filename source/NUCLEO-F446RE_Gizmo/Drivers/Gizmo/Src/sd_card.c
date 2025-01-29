@@ -10,7 +10,6 @@ static FATFS fatfs;
 static FIL file;
 static char path[4];
 static char file_name[] = "log_00.00.00.txt";
-static uint32_t read_bytes, write_bytes;
 
 // State machine
 typedef enum SD_STATE{
@@ -23,6 +22,10 @@ static SD_STATE state = SD_NOT_INIT;
 
 ReturnCode InitLogging(RTC_HandleTypeDef *handler)
 {
+	// Check if card was already initialized
+	if (state != SD_NOT_INIT)
+		return G_SD_INITIALIZED;
+
 	// Add RTC handler
 	rtc = handler;
 
@@ -33,20 +36,24 @@ ReturnCode InitLogging(RTC_HandleTypeDef *handler)
 	// Get current date and time
     RTC_TimeTypeDef time;
     RTC_DateTypeDef date;
-    HAL_StatusTypeDef HAL_status = HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BCD);
+    HAL_StatusTypeDef HAL_status = HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
     if( HAL_status != HAL_OK)
     	return C_RTC_ERROR;
 
-    HAL_status = HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BCD);
+    HAL_status = HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
     if( HAL_status != HAL_OK)
 		return C_RTC_ERROR;
 
     // Create/Open file for logging current day
-    snprintf(file_name, sizeof(file_name), "log_%1d%1d_%1d%1d_%1d%1d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
+    snprintf(file_name, sizeof(file_name), "log_%02d_%02d_%02d.txt", date.Date, date.Month, date.Year);
 
-    if ( f_open(&file, file_name, FA_OPEN_EXISTING | FA_CREATE_NEW ) != FR_OK )
-		return G_FILE_READ;
-
+    FRESULT res = f_open(&file, file_name, FA_OPEN_EXISTING);
+    if ( res != FR_OK )
+    {
+    	res = f_open(&file, file_name, FA_CREATE_NEW );
+    	if ( res != FR_OK )
+    		return G_FILE_READ;
+    }
     f_close(&file);
 
     state = SD_READY;
@@ -56,7 +63,7 @@ ReturnCode InitLogging(RTC_HandleTypeDef *handler)
 ReturnCode StopLogging()
 {
 	if (state == SD_NOT_INIT)
-		return G_ERROR;
+		return G_SD_NOT_INITIALIZED;
 
 	state = SD_NOT_INIT;
 	return G_SUCCESS;
@@ -65,40 +72,40 @@ ReturnCode StopLogging()
 static ReturnCode SD_WriteTimestamp()
 {
 	if(state == SD_NOT_INIT)
-			return G_ERROR;
+		return G_SD_NOT_INITIALIZED;
 
 	// Get current date and time
 	RTC_TimeTypeDef time;
 	RTC_DateTypeDef date;
-	HAL_StatusTypeDef HAL_status = HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BCD);
+	HAL_StatusTypeDef HAL_status = HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
 	if( HAL_status != HAL_OK)
 		return C_RTC_ERROR;
 
-	HAL_status = HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BCD);
+	HAL_status = HAL_RTC_GetDate(&hrtc, &date, RTC_FORMAT_BIN);
 	if( HAL_status != HAL_OK)
 		return C_RTC_ERROR;
 
 	if (state == SD_UPDATE)
 	{
 		// Create/Open file for logging current day
-		snprintf(file_name, sizeof(file_name), "log_%1d%1d_%1d%1d_%1d%1d.txt", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
+		snprintf(file_name, sizeof(file_name), "log_%02d_%02d_%02d.txt", date.Date, date.Month, date.Year);
 
 		state = SD_READY;
 	}
 
 	// Open file
-	if ( f_open(&file, file_name,FA_OPEN_APPEND | FA_WRITE) != FR_OK )
+	if ( f_open(&file, file_name, FA_OPEN_APPEND | FA_WRITE) != FR_OK )
 		return G_FILE_WRITE;
 
 	// Write timestamp
-	f_printf(&file, "%d%d.%d%d.%d%d", ((date.Date & 0xF0) >> 4), (date.Date & 0x0F), ((date.Month & 0xF0) >> 4), (date.Month & 0x0F), ((date.Year & 0xF0) >> 4), (date.Year & 0x0F));
-	f_printf(&file, " %d%d:%d%d:%d%d   ", ((time.Hours & 0xF0) >> 4), (time.Hours & 0x0F), ((time.Minutes & 0xF0) >> 4), (time.Minutes & 0x0F), ((time.Seconds & 0xF0) >> 4), (time.Seconds & 0x0F));
+	f_printf(&file, "%02d.%02d.%02d", date.Date, date.Month, date.Year);
+	f_printf(&file, " %02d:%02d:%02d   ", time.Hours, time.Minutes, time.Seconds);
 
 	return G_SUCCESS;
 }
 
 
-ReturnCode SD_LogError(ReturnCode error)
+ReturnCode SD_LogStatus(ReturnCode error)
 {
 	ReturnCode retcode = SD_WriteTimestamp();
 	if (retcode != G_SUCCESS)
@@ -115,8 +122,36 @@ ReturnCode SD_LogError(ReturnCode error)
 		case G_ERROR:
 			f_puts("General error!\n", &file);
 			break;
+		case G_COM_OVERFLOW:
+			f_puts("COM: Too much data over!\n", &file);
+			break;
+		case G_COM_TRANSMIT:
+			f_puts("COM: Bad transmit data!\n", &file);
+			break;
+		case G_COM_RECEIVE:
+			f_puts("COM: Error during receive op!\n", &file);
+			break;
+		case C_RTC_ERROR:
+			f_puts("RTC: Can't read data!\n", &file);
+			break;
+		case C_UART_TRANSMIT:
+			f_puts("UART: Can't transmit data!\n", &file);
+			break;
+		case C_UART_RECEIVE:
+			f_puts("UART: Can't read data!\n", &file);
+			break;
+		case C_UART_HANDLE:
+			f_puts("UART: Wrong handle!\n", &file);
+			break;
+		case G_SERVO_WRTIE:
+			f_puts("Servo: Can't write data!\n", &file);
+			break;
+		case G_SERVO_READ:
+			f_puts("Servo: Can't read data!\n", &file);
+			break;
 		default:
 			f_puts("Unknown error!\n", &file);
+			break;
 	}
 
 	f_close(&file);
@@ -125,8 +160,14 @@ ReturnCode SD_LogError(ReturnCode error)
 
 ReturnCode SD_LogMsg(const char* string)
 {
-	if ( f_open(&file, file_name,FA_OPEN_APPEND | FA_WRITE) != FR_OK )
-		return G_FILE_WRITE;
+	ReturnCode retcode = SD_WriteTimestamp();
+	if (retcode != G_SUCCESS)
+	{
+		if (retcode == G_FILE_WRITE)
+			f_close(&file);
+
+		return retcode;
+	}
 
 	for(uint16_t i = 0; *(string + i) != 0; i++)
 	{

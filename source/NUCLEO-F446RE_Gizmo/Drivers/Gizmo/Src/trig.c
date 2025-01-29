@@ -184,7 +184,6 @@ void GetTiltAngles(float *abc_buffer, int16_t *xyz_acc)
 	float a_yz, a_xy, a_xz;
 	float x_2, y_2, z_2;
 
-	// Helper variables
 	x_2 = (*(xyz_acc)) * (*(xyz_acc));
 	y_2 = (*(xyz_acc + 1)) * (*(xyz_acc + 1));
 	z_2 = (*(xyz_acc + 2)) * (*(xyz_acc + 2));
@@ -193,9 +192,9 @@ void GetTiltAngles(float *abc_buffer, int16_t *xyz_acc)
 	a_xy = sqrtf(x_2 + y_2);
 	a_xz = sqrtf(x_2 + z_2);
 
-	*(abc_buffer) = LUT_ATan( ((*(xyz_acc)) / a_yz ) );
-	*(abc_buffer + 1) = LUT_ATan( ((*(xyz_acc + 1)) / a_xz ) );
-	*(abc_buffer + 2) = LUT_ATan( (a_xy / (*(xyz_acc + 2))) );
+	*(abc_buffer) = atanf( ((*(xyz_acc)) / a_yz ) );
+	*(abc_buffer + 1) = atanf( ((*(xyz_acc + 1)) / a_xz ) );
+	*(abc_buffer + 2) = atanf( (a_xy / (*(xyz_acc + 2))) );
 }
 
 
