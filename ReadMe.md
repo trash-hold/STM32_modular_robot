@@ -27,7 +27,7 @@ Każdy z modułów składa się z dwóch typów członów: sterującego oraz ruc
 ### Wyświetlacz LCD
 W trakcie pracy robota wyświetlane są dwa możliwe panele. Pierwszym z nich jest panel inicjalizacji, który mówi o tym w jakim stadium jest rozpoczęcie pracy urządzenia.
 
-<img src="/extras/res_readme/gizmo_real.jpg" width="50%" height="50%"/>
+<img src="/extras/res_readme/LCD_init.png" width="50%" height="50%"/>
 
 Drugim wariantem wyświetlanej treści jest panel informacyjny. Zawiera on informacje o statusie peryferiów oraz ostatnie odczyty i zadawane parametry ruchu.
 
