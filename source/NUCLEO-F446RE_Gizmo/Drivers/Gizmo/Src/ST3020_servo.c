@@ -260,3 +260,24 @@ ReturnCode ServoCurrentPosition(uint8_t servo_line, int16_t* result)
 
 	return status;
 }
+
+
+ReturnCode ServoChangeMode(uint8_t servo_line, uint8_t mode)
+{
+	UART_HandleTypeDef* uart;
+	switch(servo_line)
+	{
+		case 0x00:
+			uart = uart_s1;
+			break;
+		case 0x01:
+			uart = uart_s2;
+			break;
+		default:
+			return C_UART_HANDLE;
+	}
+	tx_buffer[0] = mode;
+	ServoWrite(uart, SERVO_WRITE_INS, 33, tx_buffer, 1);
+
+	return G_SUCCESS;
+}

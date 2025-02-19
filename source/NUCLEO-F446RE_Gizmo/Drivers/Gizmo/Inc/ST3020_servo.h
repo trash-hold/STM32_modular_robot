@@ -13,5 +13,6 @@ ReturnCode ServoRead(uint8_t servo_line, uint8_t reg, uint8_t* data_buffer, uint
 ReturnCode ServoPing(uint8_t servo_line, uint8_t id);
 ReturnCode ServoTemp(uint8_t servo_line, uint8_t* temp);
 ReturnCode ServoCurrentPosition(uint8_t servo_line, int16_t *result);
+ReturnCode ServoChangeMode(uint8_t servo_line, uint8_t mode);
 
 #endif /* INC_ST3020_SERVO_H_ */

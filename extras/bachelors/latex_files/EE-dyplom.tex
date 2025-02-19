@@ -1,0 +1,103 @@
+% !TEX program = xelatex
+% !TeX encoding = utf8
+% !TeX spellcheck = pl-PL
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Wybierz rodzaj pracy dyplomowej oraz wydział
+% Pick thesis type and faculty
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[thesis=inz,faculty=ee]{EE-dyplom} 
+% thesis=[inz|mgr|bsc|msc]
+%  * inz - praca inżynierska
+%  * mgr - praca magisterska
+%  * bsc - bachelor thesis
+%  * msc - master thesis
+
+% Skróty nazw wydziałów zgodne z domenami internetowymi
+% Abbreviations of Faculties according to Internet subdomains
+% faculty=[
+%	arch,
+%	gik,
+%	ee,
+%	wip
+%	]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Konfiguracja - do personalizacji
+% Configuration - to be personalized
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\instytut{Instytut Elektrotechniki Teoretycznej i Systemów Informacyjno-Pomiarowych}
+\kierunek{Automatyka i Robotyka Stosowana}
+%\specjalnosc{}
+\title{Oprogramowanie robota modularnego opartego na mikrokontrolerze STM32}
+\engtitle{Software development for a modular robot based on the STM32 microcontroller}
+\album{319134}
+\author{Feliks Brzeziński}
+\promotor{dr inż. Łukasz Makowski}
+\date{2025}
+\longdate{}
+
+%\grantlicense{TRUE} % [TRUE|FALSE]
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Streszczenie pracy i abstract.
+% In case of thesis in English swap the order - English version goes first.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\streszczeniepracy{
+Przedmiotem pracy jest opracowanie oprogramowania dedykowanego dla robota modularnego oraz~dobór komponentów elektronicznych kluczowych dla jego działania. Stworzono oprogramowanie open-source w języku C, które umożliwia realizowanie podstawowych funkcji urządzenia takich jak: działanie aktuatorów,  wyznaczanie własnej pozycji czy archiwizacji stanów wewnętrznych oraz wykonywanych operacji. 
+
+W  drugim rozdziale pracy przybliżono konstrukcję już istniejącego robota modularnego, a~następnie zdefiniowano peryferia potrzebne do jego poprawnej pracy w oparciu o budowę mechaniczną urządzenia. W skład elektroniki wchodzą: dwa serwomechanizmy ST3020, dwa akcelerometry ADXL345, karta microSD, dwa nadajniki-odbiorniki MCP2551 oraz wyświetlacz LCD. By dokonać wyboru adekwatnego mikrokontrolera, zestawiono ze sobą jedne z najpopularniejszych rodzin mikrokontrolerów. Pozwoliło to na wyłonienie płytki deweloperskiej spełniające wszystkie wymogi układu -- rozwiązanie firmy STMicroelectronics Nucleo-F446RE. 
+
+Na drodze analizy warunków pracy robota dokonano również wyboru protokołów, które pozwoliły na zrealizowanie połączenia międzymodułowego oraz ze światem zewnętrznym -- odpowiednio protokół CAN oraz UART. Rozważono również silne oraz słabe strony obu mediów transmisji, co~umożliwilo zdefiniowanie formatu wymiany danych, zapewniającego płynną pracę urządzenia. 
+
+Dokonano pomiarów i porównano dwie zastosowane metody wyznaczania kąta obrotu serwomechanizmu. W ramach przeprowadzania testów komunikacji, zaprojektowano panel sterowniczy pozwalający na podstawową obsługę robota. Przedstawiono możliwe kierunki rozwoju projektu oraz~podsumowano rezultaty pracy.
+
+
+
+} % koniec streszczenia
+\slowakluczowe{robot modularny, mikrokontroler STM32, CAN, UART}
+
+\thesisabstract{
+Focus of this thesis is the development of~software dedicated to a modular robot and~selection of~the electronic components key to its operation. Open-source firmawre was written in C language, and consisted of~implementation of basic device functionalities such as: operation of actuators, determining its own position and logging internal states and~ performed operations.
+
+The second chapter of the work focuses on the construction of an existing modular robot, and~then defines the peripherals necessary for its correct operation based on the mechanical structure of the device. Used electronic elements include: two ST3020 servomechanisms, two ADXL345 accelerometers, a microSD card, two MCP2551 transceivers and an LCD display. In order to select an adequate microcontroller, some of the most popular microcontroller families were compared. As~a~result, development board that meets all the requirements of the system was chosen -- Nucleo-F446RE solution produced by STMicroelectronics.
+
+By analyzing the robot's operating conditions, the protocols that allowed for the connection between modules and external devices were selected - CAN and UART, respectively. The strengths and weaknesses of both transmission media were considered, which allowed for defining the data exchange format that ensures smooth operation of the devices.
+
+Using acquired measurments two methods of determining the servo's rotation angle were compared. For the purpose of testing external and interal communcation lines in addition to~controlling the robot, control panel was made. Possible directions of project development were presented and the results of the work were summarized.
+} % end of abstract
+\thesiskeywords{modular robot, STM32 microcontroller, CAN, UART}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Tu zaczyna się dokument
+% Here is the beginning of the document
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\DeclareCaptionType{dframe}[Ramka danych][Spis ramek danych]
+\begin{document}
+    
+    % Strony nagłówkowe
+    % Headers
+    \frontpages
+
+    % Właściwa treść jest w pliku tekst/main.tex
+    % Real contents is in tekst/main.tex
+    \input{tekst/main}
+
+    % Bibliografia - musi być
+    % Bibliography - must exist
+    \bibliografia
+
+    % Strony końcowe - można zakomentować, jeśli zbędne
+    % Additional pages - comment out if not needed
+    
+    % Wykaz symboli i skrótów - patrz opis w tekście przykładowym
+    %\acronymslist
+    % Spis rysunków
+    \listoffigures
+    % Spis tabel
+    \listoftables
+    % Załączniki (plik appendices.tex)
+    %\easyappendices
+\end{document}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+

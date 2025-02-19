@@ -169,10 +169,8 @@ int main(void)
   	Screen_Init();
   	Screen_DrawInitScreen();
 
-  	Screen_DrawNextInit(CAN);
-
   	ServoConfigure(0x00);
-  	ServoConfigure(0x01);
+  	//ServoConfigure(0x01);
 
   	AccConfigure(0x00);
   	AccConfigure(0x01);
@@ -184,6 +182,9 @@ int main(void)
 	Screen_DrawInfoScreen();
 	HAL_UART_Receive_DMA(&huart2, rx_buffer_DMA, 1);
 
+	ServoSetPos(0x00, 0x00, 3400, 10);
+	ServoChangeMode(0x00, 0x00);
+	ServoRead(0x00, 33, servo0_tx_buff, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */

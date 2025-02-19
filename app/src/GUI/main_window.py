@@ -171,6 +171,11 @@ class ControlPanelGUI(QWidget):
             acc_panel.writeStatus(data[0])
 
     def servoSetPos(self, data: list, index: int, servo: ServoPanel) -> None:
+        '''
+        if data[0] < 0:
+            data[0] = -data[0]
+            data[0] = data[0] | (0x01 << 15)
+        '''
         pos_low_nibble = data[0] & 0xFF
         pos_high_nibble = (data[0] & 0xFF00) >> 8
 

@@ -134,9 +134,9 @@ ReturnCode Screen_DrawNextInit(PERIPHERAL per)
 			//Clear first
 			LCD_DrawRectangle(20, 125, 110, 160, BLACK, DRAW_FULL, DOT_PIXEL_1X1);
 
-			Screen_Draw_HeaderJustified(135, "Done", 4, &Font12, LCD_BACKGROUND);
-			Screen_Draw_HeaderJustified(135, "Initializing", 12, &Font12, LCD_BACKGROUND);
-			Screen_Draw_HeaderJustified(150, "Please wait", 11, &Font8, LCD_BACKGROUND);
+			Screen_Draw_HeaderJustified(135, "Done", 4, &Font12, WHITE);
+			Screen_Draw_HeaderJustified(135, "Initializing", 12, &Font12, WHITE);
+			Screen_Draw_HeaderJustified(150, "Please wait", 11, &Font8, WHITE);
 			break;
 	}
 
